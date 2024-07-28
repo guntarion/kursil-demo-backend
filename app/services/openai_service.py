@@ -1,4 +1,4 @@
-# app/services/openai_service.py
+# fastapi app/services/openai_service.py
 from bson import ObjectId
 import os
 import re
@@ -108,7 +108,11 @@ def create_listof_topic(topic):
         topic["main_topic_id"] = main_topic_id
         list_topics_collection.insert_one(topic)
 
-    return {"main_topic_id": main_topic_id, "cost": total_cost_idr}
+    return {
+        "main_topic_id": main_topic_id,
+        "cost": total_cost_idr,
+        "generated_content": parsed_topics  # Add this line to include the parsed topics
+    }
 
 
 def read_file(file_path):

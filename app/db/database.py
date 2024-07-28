@@ -1,4 +1,4 @@
-# app/db/database.py
+# fastapi app/db/database.py
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
