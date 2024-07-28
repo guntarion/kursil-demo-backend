@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: almuhajirin_backend-fastapi
+    image: kursil_demo-fastapi
     ports:
       - "8000:8000"
     volumes:

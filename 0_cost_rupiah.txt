@@ -1,0 +1,18 @@
+Input File: ./app/prompts/prompt_listof_topic.txt
+Output File: 1_listof_topic.txt
+Input Token Count: 665
+Output Token Count: 1130
+Total Token Count: 1795
+Rp for Input: Rp 54.86
+Rp for Output: Rp 279.67
+Rp for Total (including API Call): Rp 466.54
+
+Input File: ./app/prompts/prompt_listof_topic.txt
+Output File: 1_listof_topic.txt
+Input Token Count: 665
+Output Token Count: 1074
+Total Token Count: 1739
+Rp for Input: Rp 54.86
+Rp for Output: Rp 265.81
+Rp for Total (including API Call): Rp 452.68
+

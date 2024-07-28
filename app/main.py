@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routes.openai_routes import router as openai_router
 
 app = FastAPI()
 
@@ -14,7 +15,7 @@ app.add_middleware(
 
 
 # Include the clinic router
-# app.include_router(masjid_router, prefix="/masjid", tags=["masjid"])
+app.include_router(openai_router, prefix="/api", tags=["openai"])
 
 
 @app.get("/")
