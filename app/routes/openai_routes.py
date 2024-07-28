@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, save_topic_to_database
+from app.services.openai_service import create_listof_topic
 
 class TopicRequest(BaseModel):
     topic: str
