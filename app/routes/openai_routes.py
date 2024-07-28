@@ -7,10 +7,6 @@ from app.services.openai_service import create_listof_topic, save_topic_to_datab
 class TopicRequest(BaseModel):
     topic: str
 
-
-class DetailedDiscussionPointsRequest(BaseModel):
-    list_of_topics: str
-
 router = APIRouter()
 
 @router.post("/list-of-topics/")

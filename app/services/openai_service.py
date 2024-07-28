@@ -4,8 +4,8 @@ import os
 import re
 from openai import OpenAI
 from dotenv import load_dotenv
-from bson import ObjectId
-from app.services.cost_calculator import append_cost_to_file
+import tiktoken
+from app.services.cost_calculator import calculate_cost
 from app.db.database import main_topic_collection, list_topics_collection
 
 # Load environment variables
@@ -18,6 +18,52 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 def read_prompt(file_path):
     with open(file_path, "r", encoding="utf-8") as file:
         return file.read()
+
+
+def count_tokens(text):
+    enc = tiktoken.get_encoding("cl100k_base")
+    tokens = enc.encode(text)
+    return len(tokens)
+
+
+def parse_generated_content(content):
+    sections = content.split('\n\n')
+    topics = []
+    topic_pattern = re.compile(
+        r'\d+\.\s+\*\*Topic Title:\*\* (.*?)\n', re.DOTALL)
+    objective_pattern = re.compile(r'- \*\*Objective:\*\* (.*?)\n', re.DOTALL)
+    key_concepts_pattern = re.compile(
+        r'- \*\*Key Concepts:\*\* (.*?)\n', re.DOTALL)
+    skills_pattern = re.compile(
+        r'- \*\*Skills to be Mastered:\*\* (.*?)\n', re.DOTALL)
+    discussion_pattern = re.compile(
+        r'- \*\*Point of Discussion:\*\*\n(.*?)(?=\n\s*\n|\Z)', re.DOTALL)
+
+    topics = topic_pattern.findall(content)
+    objectives = objective_pattern.findall(content)
+    key_concepts = key_concepts_pattern.findall(content)
+    skills = skills_pattern.findall(content)
+    discussions = discussion_pattern.findall(content)
+
+    if not (len(topics) == len(objectives) == len(key_concepts) == len(skills) == len(discussions)):
+        raise ValueError("Mismatch in the number of extracted items.")
+
+    parsed_topics = []
+
+    for i, topic in enumerate(topics):
+        discussion_points = discussions[i].strip().split('\n')
+        discussion_points = [point.strip('- ').strip()
+                             for point in discussion_points]
+
+        parsed_topics.append({
+            "topic_name": topic.strip(),
+            "objective": objectives[i].strip(),
+            "key_concepts": key_concepts[i].strip(),
+            "skills_to_be_mastered": skills[i].strip(),
+            "point_of_discussion": discussion_points
+        })
+
+    return parsed_topics
 
 
 def create_listof_topic(topic):
@@ -40,20 +86,29 @@ def create_listof_topic(topic):
 
     list_of_topics = completion.choices[0].message.content.strip()
 
-    with open("1_listof_topic.txt", "w", encoding="utf-8") as file:
-        file.write(list_of_topics)
+    # Calculate cost based on the output
+    prompt_input_token_count = count_tokens(prompt)
+    prompt_output_token_count = count_tokens(list_of_topics)
+    total_cost_idr = calculate_cost(
+        prompt_input_token_count, prompt_output_token_count)
 
-    # Calculate cost
-    append_cost_to_file(
-        "./app/prompts/prompt_listof_topic.txt", "1_listof_topic.txt")
+    # Parse the generated content
+    parsed_topics = parse_generated_content(list_of_topics)
 
     # Save to MongoDB
-    topic_data = {
+    main_topic_data = {
         "main_topic": topic,
-        "list_of_topics": list_of_topics.split('\n')
+        "cost": total_cost_idr,
+        "list_of_topics": [t["topic_name"] for t in parsed_topics]
     }
+    result = main_topic_collection.insert_one(main_topic_data)
+    main_topic_id = str(result.inserted_id)
 
-    return list_of_topics
+    for topic in parsed_topics:
+        topic["main_topic_id"] = main_topic_id
+        list_topics_collection.insert_one(topic)
+
+    return {"main_topic_id": main_topic_id, "cost": total_cost_idr}
 
 
 def read_file(file_path):
@@ -62,47 +117,19 @@ def read_file(file_path):
 
 
 def parse_and_save_topics(main_topic, text):
-    topic_pattern = re.compile(r'\*\*Topic Title:\*\* (.*?)\n', re.DOTALL)
-    objective_pattern = re.compile(r'- \*\*Objective:\*\* (.*?)\n', re.DOTALL)
-    key_concepts_pattern = re.compile(
-        r'- \*\*Key Concepts:\*\* (.*?)\n', re.DOTALL)
-    skills_pattern = re.compile(
-        r'- \*\*Skills to be Mastered:\*\* (.*?)\n', re.DOTALL)
-    discussion_pattern = re.compile(
-        r'- \*\*Point of Discussion:\*\*\n(.*?)(?=\n\s*\n|\Z)', re.DOTALL)
-
-    topics = topic_pattern.findall(text)
-    objectives = objective_pattern.findall(text)
-    key_concepts = key_concepts_pattern.findall(text)
-    skills = skills_pattern.findall(text)
-    discussions = discussion_pattern.findall(text)
-
-    if not (len(topics) == len(objectives) == len(key_concepts) == len(skills) == len(discussions)):
-        raise ValueError("Mismatch in the number of extracted items.")
+    parsed_topics = parse_generated_content(text)
 
     main_topic_data = {
         "main_topic": main_topic,
-        "list_of_topics": topics
+        "list_of_topics": [t["topic_name"] for t in parsed_topics]
     }
 
     result = main_topic_collection.insert_one(main_topic_data)
     main_topic_id = str(result.inserted_id)
 
-    for i, topic in enumerate(topics):
-        discussion_points = discussions[i].strip().split('\n')
-        discussion_points = {str(idx + 1): point.strip('- ').strip()
-                             for idx, point in enumerate(discussion_points)}
-
-        topic_data = {
-            "main_topic_id": main_topic_id,
-            "topic_name": topic.strip(),
-            "objective": objectives[i].strip(),
-            "key_concepts": key_concepts[i].strip(),
-            "skills_to_be_mastered": skills[i].strip(),
-            "point_of_discussion": discussion_points
-        }
-
-        list_topics_collection.insert_one(topic_data)
+    for topic in parsed_topics:
+        topic["main_topic_id"] = main_topic_id
+        list_topics_collection.insert_one(topic)
 
     return {"main_topic_id": main_topic_id}
 
