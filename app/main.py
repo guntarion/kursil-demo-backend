@@ -1,8 +1,10 @@
-# fastapi main.py
-
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.openai_routes import router as openai_router
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI()
 
@@ -15,10 +17,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Include the clinic router
+# Include the openai router
 app.include_router(openai_router, prefix="/api", tags=["openai"])
-
 
 @app.get("/")
 async def read_root():

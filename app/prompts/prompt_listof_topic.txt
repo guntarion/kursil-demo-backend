@@ -18,7 +18,7 @@ You are an educational content developer tasked with creating a list of training
 
 ### Example Interaction:
 
-User: "The topic is Renewable Energy Integration in the National Grid."
+User: "Renewable Energy Integration in the National Grid."
 
 AI:
 

@@ -3,10 +3,17 @@ from bson import ObjectId
 import os
 import re
 from openai import OpenAI
+from typing import List, Dict
 from dotenv import load_dotenv
 import tiktoken
 from app.services.cost_calculator import calculate_cost
 from app.db.database import main_topic_collection, list_topics_collection
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 # Load environment variables
 load_dotenv()
@@ -138,3 +145,177 @@ def create_listof_topic(topic):
         "main_topic_objective": summary
     }
 
+def translate_points(points: List[str]) -> List[str]:
+    prompt = "Translate the following points of discussion to Bahasa Indonesia:\n\n"
+    for i, point in enumerate(points, 1):
+        prompt += f"{i}. {point}\n"
+
+    messages = [
+        {"role": "system", "content": "You are a professional translator specializing in English to Bahasa Indonesia translations."},
+        {"role": "user", "content": prompt}
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    translated_text = completion.choices[0].message.content.strip()
+    translated_points = translated_text.split('\n')
+    return [point.split('. ', 1)[1] if '. ' in point else point for point in translated_points]
+
+def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: List[str]) -> List[Dict[str, str]]:
+    prompt_template = read_prompt("./app/prompts/prompt_detaillistof_discussionpoint.txt")
+
+    points_str = "\n".join([f"  - {point}" for point in points_of_discussion])
+    prompt = prompt_template.format(topic=topic, objective=objective, pointsofdiscussion=points_str)
+
+    messages = [
+        {"role": "system", "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields."},
+        {"role": "user", "content": prompt}
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    elaborated_content = completion.choices[0].message.content.strip()
+    print("\n\nelaborated_content", elaborated_content)
+
+    # Parse the elaborated content into a structured format
+    elaborated_points = []
+    current_subtopic = None
+    current_elaboration = []
+    current_point = None
+
+    for line in elaborated_content.split('\n'):
+        line = line.strip()
+        if line.startswith('**Subtopic:**'):
+            if current_subtopic:
+                elaborated_points.append({
+                    "subtopic": current_subtopic,
+                    "elaboration": '\n'.join(current_elaboration)
+                })
+            current_subtopic = line.split('**Subtopic:**')[1].strip()
+            current_elaboration = []
+        elif line.startswith('- **Discussion Points Elaboration:**'):
+            continue  # Skip this line as it's not part of the actual elaboration
+        elif line.startswith('- **'):
+            if current_point:
+                current_elaboration.append(current_point)
+            current_point = line[3:]  # Remove the leading '- '
+        elif line.startswith('-'):
+            if current_point:
+                current_point += f"\n  {line[1:].strip()}"
+            else:
+                current_elaboration.append(line[1:].strip())
+        elif line:  # Non-empty line
+            if current_point:
+                current_point += f"\n  {line.strip()}"
+            else:
+                current_elaboration.append(line.strip())
+
+    # Add the last point and subtopic
+    if current_point:
+        current_elaboration.append(current_point)
+    if current_subtopic:
+        elaborated_points.append({
+            "subtopic": current_subtopic,
+            "elaboration": '\n'.join(current_elaboration)
+        })
+
+    print("\n\nelaborated_points", elaborated_points)
+
+    return elaborated_points
+
+def parsing_test() -> List[Dict[str, str]]:
+    hardcoded_text = """
+1. **Subtopic:** Understanding Grid Stability and Reliability Issues
+   - **Discussion Points Elaboration:**
+     - **Definition and Importance of Grid Stability:**
+       - Explanation of grid stability and its role in ensuring a consistent power supply.
+       - Importance of maintaining frequency and voltage within acceptable limits.
+     - **Factors Affecting Grid Stability:**
+       - Influence of renewable energy sources such as wind and solar on grid stability.
+       - Variability and unpredictability of renewable resources.
+       - Impact of traditional power generation methods transitioning to renewables.
+     - **Impact of Renewable Energy Intermittency on Grid Reliability:**
+       - Consequences of high penetration of intermittent renewables on grid reliability.
+       - Frequency fluctuations and voltage spikes.
+     - **Current Methods for Maintaining Grid Stability:**
+       - Overview of control mechanisms like automatic generation control (AGC).
+       - Role of grid operators and demand-side management in stabilizing the grid.
+     - **Examples and Case Studies:**
+       - Examination of grid stability issues experienced in Germany due to high renewable energy integration.
+       - Analysis of the South Australian blackout and lessons learned.
+  
+2. **Subtopic:** Solutions to Intermittency Problems
+   - **Discussion Points Elaboration:**
+     - **Definition of Intermittency:**
+       - Clarification of intermittency and its significance in renewable energy.
+       - Differences between short-term and long-term intermittency.
+     - **Technological Solutions:**
+       - Overview of demand response strategies to balance supply and demand.
+       - Role of smart grids in managing intermittent power flows.
+       - Description of grid-scale energy storage technologies and their function.
+     - **Policy and Regulatory Approaches:**
+       - Discussion of regulatory incentives for utilities to adopt advanced technologies.
+       - The effect of energy market design on managing intermittency issues.
+     - **Examples and Case Studies:**
+       - Case study of California's approach to managing solar energy intermittency through policy frameworks and technology deployment.
+       - Review of lessons learned from Spain's management of wind energy intermittency.
+  
+3. **Subtopic:** Role of Energy Storage in Renewable Integration
+   - **Discussion Points Elaboration:**
+     - **Types of Energy Storage Technologies:**
+       - Comprehensive review of various energy storage options including batteries, pumped hydro storage, and thermal storage.
+       - Comparison of their advantages and limitations in the context of renewable energy integration.
+     - **Benefits and Limitations of Energy Storage:**
+       - Discussion of how energy storage systems can enhance grid resilience and reliability.
+       - Challenges associated with energy storage technology adoption, such as cost and scalability.
+     - **Role of Energy Storage in Balancing Supply and Demand:**
+       - Examination of how energy storage absorbs excess energy during peak production and releases it during high demand.
+       - Explanation of real-time energy management systems utilizing storage.
+     - **Integration of Energy Storage with Renewable Energy Sources:**
+       - Overview of methods for integrating storage solutions with different renewable technologies.
+       - Importance of forecasting and energy management software in optimizing storage use.
+     - **Examples and Case Studies:**
+       - Case study of Tesla's battery storage project in South Australia demonstrating effective integration of renewable energy and storage technologies.
+       - Insights from the Hornsdale Power Reserve and its impact on grid stability.
+    """
+    
+    # logger.debug(f"Input text:\n{hardcoded_text}")
+
+    elaborated_points = []
+    
+    elaborated_points = []
+    current_subtopic = None
+    current_elaboration = []
+
+    for line in hardcoded_text.split('\n'):
+        line = line.strip()
+        logger.debug(f"Processing line: {line}")
+
+        if '**Subtopic:**' in line:
+            if current_subtopic:
+                elaborated_points.append({
+                    "subtopic": current_subtopic,
+                    "elaboration": '\n'.join(current_elaboration)
+                })
+            current_subtopic = line.split('**Subtopic:**')[1].strip()
+            current_elaboration = []
+            logger.debug(f"Found new subtopic: {current_subtopic}")
+        elif '**Discussion Points Elaboration:**' not in line and line:  # Non-empty line and not the omitted line
+            current_elaboration.append(line)
+            logger.debug(f"Added line to current elaboration: {line}")
+
+    # Add the last subtopic
+    if current_subtopic:
+        elaborated_points.append({
+            "subtopic": current_subtopic,
+            "elaboration": '\n'.join(current_elaboration)
+        })
+
+    logger.debug(f"Parsed result: {elaborated_points}")
+    return elaborated_points
