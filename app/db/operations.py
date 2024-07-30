@@ -70,3 +70,12 @@ def update_prompting_and_content(topic_id, results):
                 }
             }
         )
+
+def get_point_of_discussion(point_id: str):
+    return points_discussion_collection.find_one({"_id": ObjectId(point_id)})
+
+def update_prompting(point_id: str, prompting: str):
+    points_discussion_collection.update_one(
+        {"_id": ObjectId(point_id)},
+        {"$set": {"prompting": prompting}}
+    )
