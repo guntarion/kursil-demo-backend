@@ -97,8 +97,6 @@ async def elaborate_points_of_discussion(request: ElaborationRequest):
         logger.error(f"Error in elaboration: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     
-
-
 class ContentGenerationRequest(BaseModel):
     topic_id: str
 
