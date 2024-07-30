@@ -1,0 +1,112 @@
+'### Tujuan Pembelajaran
+
+1. Memahami dan mendefinisikan konsep dasar pembelajaran mesin (Machine Learning) dan kaitannya dengan pemeliharaan dalam sektor listrik.
+2. Mampu menjelaskan jenis-jenis pembelajaran mesin, yaitu pembelajaran terawasi (supervised), pembelajaran tidak terawasi (unsupervised), dan pembelajaran penguatan (reinforcement) dengan contoh aplikasi di bidang pemeliharaan.
+3. Mengidentifikasi manfaat dan pentingnya penerapan pembelajaran mesin dalam strategi pemeliharaan prediktif, serta bagaimana hal ini dapat meningkatkan efisiensi operasional di PLN.
+4. Menerapkan prinsip-prinsip pembelajaran mesin untuk analisis data real-time menggunakan teknologi IoT, serta bagaimana data ini dapat digunakan untuk memprediksi kegagalan peralatan.
+5. Menyusun rencana penerapan teknologi pembelajaran mesin dalam konteks pemeliharaan yang lebih proaktif dan berbasis data di PLN.
+
+### Usulan Durasi Waktu
+
+**Metodologi Pengiriman**: Kombinasi pengajaran langsung (ceramah), diskusi kelompok, dan kegiatan berbasis inkuiri (analisis studi kasus).
+
+**Durasi yang Disarankan**:
+- **Pengantar Pembelajaran Mesin**: 15 menit
+- **Konsep Utama Pembelajaran Mesin**: 30 menit
+- **Pentingnya Pembelajaran Mesin dalam Pemeliharaan Prediktif**: 25 menit
+- **Pemanfaatan Data Real-Time dan IoT**: 25 menit
+- **Diskusi Kasus dan Aplikasi di PLN**: 30 menit
+- **Sesi Tanya Jawab**: 15 menit
+
+**Durasi Total**: **140 menit**
+
+### Identifikasi Kriteria Penilaian
+
+1. **Pemahaman Konsep**: Kemampuan mendefinisikan dan menjelaskan definisi serta jenis-jenis pembelajaran mesin.
+2. **Aplikasi Pengetahuan**: Kemampuan untuk menjelaskan penerapan praktis pembelajaran mesin dalam konteks pemeliharaan prediktif di PLN.
+3. **Keterampilan Pemecahan Masalah**: Kemampuan untuk mengidentifikasi dan merespons tantangan yang dihadapi dalam penerapan pembelajaran mesin.
+4. **Analisis Data Real-Time**: Kemampuan untuk menganalisis dan memberikan rekomendasi berdasarkan data yang dikumpulkan melalui IoT.
+
+### Kuis Pilihan Ganda
+
+1. **Apa itu pembelajaran mesin (Machine Learning)?**
+   - A) Teknologi untuk mengontrol perangkat keras
+   - B) Metode untuk mengoptimalkan bisnis secara manual
+   - C) Cabang dari kecerdasan buatan yang memungkinkan komputer belajar dari data
+   - D) Sistem yang mengharuskan program tertentu untuk berfungsi
+   - **Jawaban yang benar**: C) Cabang dari kecerdasan buatan yang memungkinkan komputer belajar dari data
+     - **Alasan**: Pembelajaran mesin adalah cara di mana komputer belajar dari data dan pengalaman untuk meningkatkan kinerjanya tanpa diharuskan diprogram secara eksplisit.
+
+2. **Apa yang dimaksud dengan pembelajaran terawasi (supervised learning)?**
+   - A) Algoritma yang bekerja dengan data tanpa label
+   - B) Proses di mana algoritma belajar dari data yang sudah diberi label
+   - C) Algoritma yang tidak memerlukan intervensi manusia
+   - D) Teknik untuk menemukan pola dalam data acak
+   - **Jawaban yang benar**: B) Proses di mana algoritma belajar dari data yang sudah diberi label
+     - **Alasan**: Pembelajaran terawasi melibatkan pelatihan algoritma menggunakan dataset yang sudah diberi label untuk menghasilkan output yang diinginkan.
+
+3. **Dalam konteks pemeliharaan, apa yang menjadi keuntungan dari pemeliharaan prediktif?**
+   - A) Meningkatkan jam kerja tanpa batasan
+   - B) Mengurangi downtime dengan memprediksi kegagalan sebelum terjadi
+   - C) Menambah biaya operasional
+   - D) Menghapus semua risiko dalam sistem
+   - **Jawaban yang benar**: B) Mengurangi downtime dengan memprediksi kegagalan sebelum terjadi
+     - **Alasan**: Pemeliharaan prediktif dapat mencegah kerugian besar dengan memprediksi dan memperbaiki masalah sebelum terjadi kegagalan.
+
+4. **Apa manfaat penggunaan IoT dalam pembelajaran mesin untuk pemeliharaan?**
+   - A) Meningkatkan kompleksitas pengolahan data
+   - B) Mengumpulkan data secara manual
+   - C) Memungkinkan analisis data secara real-time untuk prediksi kegagalan
+   - D) Mengurangi kecepatan pengambilan keputusan
+   - **Jawaban yang benar**: C) Memungkinkan analisis data secara real-time untuk prediksi kegagalan
+     - **Alasan**: IoT memungkinkan pengumpulan data nyata dari peralatan, yang dapat digunakan untuk menganalisis dan memprediksi kegagalan secara lebih akurat.
+
+5. **Apa yang dilakukan dalam pembelajaran tidak terawasi (unsupervised learning)?**
+   - A) Melatih algoritma dengan data yang sudah diberi label
+   - B) Menemukan pola dalam data tanpa label
+   - C) Menghapus outlier dari dataset
+   - D) Memberikan feedback kepada pengguna
+   - **Jawaban yang benar**: B) Menemukan pola dalam data tanpa label
+     - **Alasan**: Pembelajaran tidak terawasi berfokus pada pengelompokan data dan menemukan struktur yang ada di dalam data tanpa adanya label.
+
+6. **Apa contoh penerapan pembelajaran penguatan (reinforcement learning) dalam sektor energi?**
+   - A) Menentukan jam kerja yang optimal untuk karyawan
+   - B) Menyesuaikan pengaturan dalam sistem untuk mengoptimalkan efisiensi
+   - C) Meningkatkan penjualan langsung
+   - D) Mengelompokkan peralatan berdasarkan kriteria tertentu
+   - **Jawaban yang benar**: B) Menyesuaikan pengaturan dalam sistem untuk mengoptimalkan efisiensi
+     - **Alasan**: Pembelajaran penguatan mengajarkan algoritma untuk mengambil keputusan berdasarkan dampak dari tindakan yang diambil sebelumnya.
+
+7. **Mengapa pembelajaran mesin sangat penting untuk PLN?**
+   - A) Untuk menggantikan karyawan
+   - B) Untuk meningkatkan proses pemeliharaan dan efisiensi operasional
+   - C) Agar PLN tetap relevan dengan teknologi
+   - D) Untuk meningkatkan konsumsi energi
+   - **Jawaban yang benar**: B) Untuk meningkatkan proses pemeliharaan dan efisiensi operasional
+     - **Alasan**: Pembelajaran mesin membantu PLN dalam mengurangi biaya pemeliharaan serta meningkatkan keandalan sistem energi.
+
+8. **Apa yang tidak termasuk dalam keuntungan pemeliharaan prediktif?**
+   - A) Mengurangi biaya pemeliharaan
+   - B) Meningkatkan keandalan peralatan
+   - C) Memungkinkan perbaikan yang tidak direncanakan
+   - D) Mengurangi risiko kegagalan
+   - **Jawaban yang benar**: C) Memungkinkan perbaikan yang tidak direncanakan
+     - **Alasan**: Pemeliharaan prediktif berfokus pada perbaikan terencana dan proaktif untuk mencegah kegagalan.
+
+9. **Dalam penggunaan data real-time, apa yang menjadi tantangan utama?**
+   - A) Kecepatan pengolahan data
+   - B) Integrasi sistem dan perangkat
+   - C) Ketersediaan sumber daya manusia
+   - D) Tingginya biaya operasional
+   - **Jawaban yang benar**: B) Integrasi sistem dan perangkat
+     - **Alasan**: Tantangan besar dalam penggunaan data real-time adalah memastikan bahwa semua sistem dan perangkat dapat berfungsi secara terpadu dan efisien.
+
+10. **Apa peran sensor dalam penerapan pembelajaran mesin di PLN?**
+    - A) Meningkatkan konsumsi energi
+    - B) Mengumpulkan data untuk analisis dan pemodelan
+    - C) Memprogram ulang perangkat secara otomatis
+    - D) Meminimalisir penggunaan teknologi
+    - **Jawaban yang benar**: B) Mengumpulkan data untuk analisis dan pemodelan
+      - **Alasan**: Sensor mengumpulkan data tentang kondisi peralatan yang dapat dianalisis menggunakan pembelajaran mesin untuk meningkatkan pemeliharaan.
+
+Dengan mengikuti modul pembelajaran ini, karyawan PLN akan lebih siap untuk menerapkan prinsip-prinsip pembelajaran mesin dalam konteks pemeliharaan, sehingga mampu berkontribusi pada peningkatan efisiensi dan inovasi di sektor energi.

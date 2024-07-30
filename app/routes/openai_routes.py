@@ -4,8 +4,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting, generate_handout
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting, generate_handout, generate_misc_points
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points
 
 import logging
 
@@ -214,3 +214,32 @@ async def generate_handout_route(request: PromptingRequest):
     except Exception as e:
         logger.error(f"Error in handout generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))    
+
+@router.post("/generate-misc-points")
+async def generate_misc_points_route(request: PromptingRequest, background_tasks: BackgroundTasks):
+    logger.debug(f"Received request to generate miscellaneous points for point of discussion: {request.point_of_discussion_id}")
+    try:
+        point = get_point_of_discussion(request.point_of_discussion_id)
+        if not point:
+            raise HTTPException(status_code=404, detail="Point of discussion not found")
+        
+        if not point.get('handout'):
+            raise HTTPException(status_code=400, detail="Handout not found. Please generate handout first.")
+        
+        # Start the generation process in the background
+        background_tasks.add_task(process_misc_points, request.point_of_discussion_id, point['point_of_discussion'], point['handout'])
+        
+        return {"message": "Miscellaneous points generation started in the background"}
+    except Exception as e:
+        logger.error(f"Error in miscellaneous points generation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_misc_points(point_id: str, point_of_discussion: str, handout: str):
+    try:
+        misc_points = generate_misc_points(point_of_discussion, handout)
+        logger.info(f"Generated misc points for point of discussion: {point_id}")
+        logger.debug(f"Misc points: {misc_points}")
+        update_misc_points(point_id, misc_points)
+        logger.info(f"Updated database with misc points for point of discussion: {point_id}")
+    except Exception as e:
+        logger.error(f"Error in background misc points generation: {str(e)}", exc_info=True)

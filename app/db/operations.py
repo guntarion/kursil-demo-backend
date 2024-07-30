@@ -2,6 +2,9 @@
 
 from .database import main_topic_collection, list_topics_collection, points_discussion_collection
 from bson import ObjectId
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_all_main_topics():
     return list(main_topic_collection.find({}, {"main_topic": 1, "cost": 1}))
@@ -85,3 +88,24 @@ def update_handout(point_id: str, handout: str):
         {"_id": ObjectId(point_id)},
         {"$set": {"handout": handout}}
     )    
+
+def update_misc_points(point_id: str, misc_points: dict):
+    logger.info(f"Updating misc points for point of discussion: {point_id}")
+    try:
+        result = points_discussion_collection.update_one(
+            {"_id": ObjectId(point_id)},
+            {"$set": {
+                "method": misc_points.get("method", ""),
+                "quiz": misc_points.get("quiz", ""),
+                "assessment": misc_points.get("assessment", ""),
+                "learn_objective": misc_points.get("learn_objective", ""),
+                "duration": misc_points.get("duration")
+            }}
+        )
+        logger.info(f"Update result: matched {result.matched_count}, modified {result.modified_count}")
+        if result.modified_count == 0:
+            logger.warning(f"No documents were modified for point of discussion: {point_id}")
+    except Exception as e:
+        logger.error(f"Error updating misc points for point of discussion {point_id}: {str(e)}")
+        raise
+

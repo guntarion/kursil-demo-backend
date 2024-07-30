@@ -1,0 +1,59 @@
+**— Prompt**
+
+Using the content provided by the user, perform the following tasks to create a structured educational module:
+
+### 1. Identify Learning Objectives:
+- Analyze the content and distill the main learning objectives. Provide a concise narrative that clearly outlines what students should know or be able to do by the end of the session. Ensure that these objectives are specific, measurable, attainable, relevant, and time-bound (SMART).
+
+### 2. Propose Time Duration:
+- Propose the appropriate delivery methodology for the content and the time required to adequately cover the material. Provide a suggested duration in minutes for delivering the material in the suggested methodology, considering the complexity of the content and the depth of knowledge to be shared. Provide total times in minutes.
+
+### 3. Identify Assessment Criteria:
+- Develop criteria to assess students' understanding and mastery of the topic. These criteria should align with the learning objectives and might include parameters like comprehension of key concepts, ability to apply knowledge in practical settings, and critical thinking or problem-solving skills demonstrated.
+
+### Additional Instructions:
+- Ensure that all components of the educational module are coherent and logically organized.
+- Use clear and precise language suitable for the educational level of the intended audience.
+- Consider the pedagogical approaches that might best suit the delivery of this content, such as direct instruction, collaborative learning, or inquiry-based activities.
+
+This educational module should serve as a comprehensive resource for trainers to effectively teach and assess the provided content, enhancing students' learning experience and ensuring they meet the specified learning objectives.
+
+Please give response in BAHASA INDONESIA.
+
+### Example Response:
+
+#### Tujuan Pembelajaran
+
+1. Mendefinisikan manajemen bahan bakar dan menjelaskan ruang lingkupnya dalam sektor energi.
+2. Memahami dan mengartikulasikan pentingnya dan relevansi manajemen bahan bakar dalam efisiensi operasional, manajemen biaya, dan kelestarian lingkungan.
+3. Mengidentifikasi dan menjelaskan elemen-elemen kunci dari manajemen bahan bakar, termasuk pengadaan, penyimpanan, kontrol kualitas, logistik, dan pemanfaatan.
+4. Menghubungkan konsep manajemen bahan bakar dengan aplikasi dunia nyata melalui contoh dan studi kasus yang relevan.
+5. Menerapkan praktik-praktik terbaik dalam manajemen bahan bakar untuk meningkatkan keandalan dan efisiensi pasokan energi di PLN Persero.
+6. Mendiskusikan tren dan inovasi masa depan dalam manajemen bahan bakar, termasuk bahan bakar terbarukan, teknologi penyimpanan canggih, dan digitalisasi.
+
+
+#### Usulan Durasi Waktu
+
+**Metodologi Pengiriman**: Kombinasi antara pengajaran langsung (ceramah), pembelajaran kolaboratif (diskusi kelompok), dan kegiatan berbasis inkuiri (analisis studi kasus).
+
+**Durasi yang Disarankan**:
+
+- **Pengantar dan Definisi**: 15 menit
+- **Penting dan Relevansi**: 20 menit
+- Penjelasan Rinci tentang Elemen-elemen Kunci**: 30 menit
+- **Analogi untuk Mengilustrasikan Konsep-konsep yang Kompleks**: 15 menit
+- **Contoh dan Studi Kasus**: 30 menit
+- **Implikasi dan Aplikasi**: 20 menit
+- **Diskusi Tren Masa Depan**: 20 menit
+- Sesi Tanya Jawab**: 10 menit
+
+**Durasi Total**: 150
+
+#### Identifikasi Kriteria Penilaian
+
+1. **Pemahaman terhadap Konsep-konsep Utama**: Kemampuan untuk mendefinisikan dan menjelaskan manajemen bahan bakar dan elemen-elemen utamanya secara akurat.
+2. **Penerapan Pengetahuan**: Menunjukkan kemampuan untuk menerapkan prinsip-prinsip manajemen bahan bakar dalam skenario praktis yang relevan dengan PLN Persero.
+3. **Pemikiran Kritis**: Kemampuan untuk menganalisis dan mendiskusikan masalah-masalah yang berkaitan dengan manajemen bahan bakar: Kemampuan untuk menganalisis dan mendiskusikan contoh-contoh dunia nyata dan studi kasus, mengidentifikasi praktik-praktik terbaik dan area-area yang perlu ditingkatkan.
+4. **Kemampuan Pemecahan Masalah**: Kemampuan untuk mengusulkan solusi untuk tantangan manajemen bahan bakar dan mendiskusikan tren masa depan secara efektif.
+
+**— End of Prompt**

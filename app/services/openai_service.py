@@ -307,3 +307,56 @@ def generate_handout(point_of_discussion: str, prompting: str) -> str:
     )
 
     return completion.choices[0].message.content.strip()
+
+def generate_misc_points(point_of_discussion: str, handout: str) -> dict:
+    prompt_template = read_prompt("./app/prompts/prompt_misc_points.txt")
+    my_prompt = prompt_template + f"The topic is {point_of_discussion} and here's the information: {handout}"
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields. Provide response in bahasa Indonesia."
+        },
+        {
+            "role": "user",
+            "content": my_prompt
+        }
+    ]
+
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages
+        )
+
+        response = completion.choices[0].message.content.strip()
+        logger.debug(f"OpenAI response: {response}")
+
+
+        # Parse the response
+        method = re.search(r'#### Usulan Durasi Waktu(.*?)(?=####|\Z)', response, re.DOTALL)
+        assessment = re.search(r'#### Identifikasi Kriteria Penilaian(.*?)(?=####|\Z)', response, re.DOTALL)
+        learn_objective = re.search(r'#### Tujuan Pembelajaran(.*?)(?=####|\Z)', response, re.DOTALL)
+
+        # Parse total duration
+        duration_match = re.search(r'\*\*Durasi Total\*\*:\s*(\d+)\s*menit', response)
+        duration = int(duration_match.group(1)) if duration_match else None
+
+        logger.debug(f"🔰 Duration: {duration}")
+
+        result = {
+            "method": method.group(1).strip() if method else "",
+            "assessment": assessment.group(1).strip() if assessment else "",
+            "learn_objective": learn_objective.group(1).strip() if learn_objective else "",
+            "duration": duration
+        }
+        logger.debug(f"🔰 Method: {result['method']}")
+        logger.debug(f"🔰 Assessment: {result['assessment']}")
+        logger.debug(f"🔰 Learn Objective: {result['learn_objective']}")
+        logger.debug(f"🔰 Duration: {duration}")
+
+        logger.debug(f"Parsed result: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Error generating misc points: {str(e)}")
+        raise
