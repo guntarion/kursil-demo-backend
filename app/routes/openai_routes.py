@@ -4,8 +4,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting, generate_handout
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout
 
 import logging
 
@@ -188,3 +188,29 @@ async def generate_prompting_route(request: PromptingRequest):
     except Exception as e:
         logger.error(f"Error in prompting generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/generate-handout")
+async def generate_handout_route(request: PromptingRequest):
+    logger.debug(f"Received request to generate handout for point of discussion: {request.point_of_discussion_id}")
+    try:
+        point = get_point_of_discussion(request.point_of_discussion_id)
+        if not point:
+            raise HTTPException(status_code=404, detail="Point of discussion not found")
+        
+        # Check if handout already exists
+        if point.get('handout'):
+            logger.info(f"Handout already exists for point of discussion: {request.point_of_discussion_id}")
+            return {"message": "Handout already exists", "handout": point['handout']}
+        
+        # Check if prompting exists
+        if not point.get('prompting'):
+            raise HTTPException(status_code=400, detail="Prompting not found. Please generate prompting first.")
+        
+        # Generate handout
+        handout = generate_handout(point['point_of_discussion'], point['prompting'])
+        update_handout(request.point_of_discussion_id, handout)
+        
+        return {"message": "Handout generated and stored successfully", "handout": handout}
+    except Exception as e:
+        logger.error(f"Error in handout generation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))    

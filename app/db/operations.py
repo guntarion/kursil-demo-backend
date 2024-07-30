@@ -79,3 +79,9 @@ def update_prompting(point_id: str, prompting: str):
         {"_id": ObjectId(point_id)},
         {"$set": {"prompting": prompting}}
     )
+
+def update_handout(point_id: str, handout: str):
+    points_discussion_collection.update_one(
+        {"_id": ObjectId(point_id)},
+        {"$set": {"handout": handout}}
+    )    

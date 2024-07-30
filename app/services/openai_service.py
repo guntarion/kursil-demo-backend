@@ -268,7 +268,7 @@ async def generate_content(prompting: str, point_of_discussion: str) -> str:
     print(f"Generated content for '{point_of_discussion}'")
     return content
 
-
+# Individual functions to generate prompting
 def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
     prompt_template = read_prompt("./app/prompts/prompt_create_prompttowrite.txt")
     
@@ -287,3 +287,23 @@ def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
 
     return completion.choices[0].message.content.strip()
 
+def generate_handout(point_of_discussion: str, prompting: str) -> str:
+    myprompt = f"The topic is {point_of_discussion} and here's the detail instruction: {prompting}"
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields. Create a detailed and comprehensive section for a book chapter that addresses the provided discussion points. The content should be tailored for PLN Persero employees who have diverse educational backgrounds, ensuring that the explanations are technically informative yet understandable for non-technical staff. The aim of this book chapter is to provide PLN Persero employees with a well-rounded understanding of the provided discussion points."
+        },
+        {
+            "role": "user",
+            "content": myprompt
+        }
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    return completion.choices[0].message.content.strip()
