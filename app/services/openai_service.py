@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import tiktoken
 from app.services.cost_calculator import calculate_cost
 from app.db.database import main_topic_collection, list_topics_collection
+from app.db.operations import get_topic_by_name, add_elaborated_point
 
 import logging
 
@@ -181,17 +182,18 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
     )
 
     elaborated_content = completion.choices[0].message.content.strip()
-    print("\n\nelaborated_content", elaborated_content)
+    # print("\n\nelaborated_content", elaborated_content)
 
     # Parse the elaborated content into a structured format
     elaborated_points = []
     current_subtopic = None
     current_elaboration = []
-    current_point = None
 
     for line in elaborated_content.split('\n'):
         line = line.strip()
-        if line.startswith('**Subtopic:**'):
+        logger.debug(f"Processing line: {line}")
+
+        if '**Subtopic:**' in line:
             if current_subtopic:
                 elaborated_points.append({
                     "subtopic": current_subtopic,
@@ -199,33 +201,27 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
                 })
             current_subtopic = line.split('**Subtopic:**')[1].strip()
             current_elaboration = []
-        elif line.startswith('- **Discussion Points Elaboration:**'):
-            continue  # Skip this line as it's not part of the actual elaboration
-        elif line.startswith('- **'):
-            if current_point:
-                current_elaboration.append(current_point)
-            current_point = line[3:]  # Remove the leading '- '
-        elif line.startswith('-'):
-            if current_point:
-                current_point += f"\n  {line[1:].strip()}"
-            else:
-                current_elaboration.append(line[1:].strip())
-        elif line:  # Non-empty line
-            if current_point:
-                current_point += f"\n  {line.strip()}"
-            else:
-                current_elaboration.append(line.strip())
+            logger.debug(f"Found new subtopic: {current_subtopic}")
+        elif '**Discussion Points Elaboration:**' not in line and line:  # Non-empty line and not the omitted line
+            current_elaboration.append(line)
+            logger.debug(f"Added line to current elaboration: {line}")
 
-    # Add the last point and subtopic
-    if current_point:
-        current_elaboration.append(current_point)
+    # Add the last subtopic
     if current_subtopic:
         elaborated_points.append({
             "subtopic": current_subtopic,
             "elaboration": '\n'.join(current_elaboration)
         })
 
-    print("\n\nelaborated_points", elaborated_points)
+    # logger.debug(f"Parsed result: {elaborated_points}")
+
+    # Store elaborated points in the database
+    topic_doc = get_topic_by_name(topic)
+    if topic_doc:
+        topic_id = topic_doc['_id']
+        # print("🚀 ~ topic_id:", topic_id)
+        for point in elaborated_points:
+            add_elaborated_point(point['subtopic'], point['elaboration'], topic_id)
 
     return elaborated_points
 
@@ -287,8 +283,6 @@ def parsing_test() -> List[Dict[str, str]]:
     
     # logger.debug(f"Input text:\n{hardcoded_text}")
 
-    elaborated_points = []
-    
     elaborated_points = []
     current_subtopic = None
     current_elaboration = []

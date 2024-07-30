@@ -11,3 +11,4 @@ db = client.get_database("kursil")
 
 main_topic_collection = db.get_collection("main_topic")
 list_topics_collection = db.get_collection("list_topics")
+points_discussion_collection = db.get_collection("points_discussion")

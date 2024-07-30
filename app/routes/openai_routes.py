@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, parsing_test
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, parsing_test, elaborate_discussionpoint
 from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id
 
 import logging
@@ -86,8 +86,24 @@ async def test_parsing():
     logger.debug("Received request for parsing test")
     try:
         elaborated_points = parsing_test()
-        logger.debug(f"Parsing test result: {elaborated_points}")
+        # logger.debug(f"Parsing test result: {elaborated_points}")
         return {"elaborated_points": elaborated_points}
     except Exception as e:
         logger.error(f"Error in parsing test: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ElaborationRequest(BaseModel):
+    topic: str
+    objective: str
+    points_of_discussion: List[str]
+
+@router.post("/elaborate-points")
+async def elaborate_points_of_discussion(request: ElaborationRequest):
+    logger.debug("Received request for elaboration")
+    try:
+        elaborated_points = elaborate_discussionpoint(request.topic, request.objective, request.points_of_discussion)
+        # logger.debug(f"Elaboration result: {elaborated_points}")
+        return {"elaborated_points": elaborated_points}
+    except Exception as e:
+        logger.error(f"Error in elaboration: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
