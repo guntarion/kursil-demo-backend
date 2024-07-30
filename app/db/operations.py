@@ -34,3 +34,15 @@ def add_elaborated_point(point_of_discussion, elaboration, topic_name_id):
 
 def get_elaborated_points_by_topic_id(topic_name_id):
     return list(points_discussion_collection.find({"topic_name_id": topic_name_id}))
+
+def get_topic_by_id(topic_id):
+    return list_topics_collection.find_one({"_id": ObjectId(topic_id)})
+
+def get_elaborated_points_by_topic_id(topic_id):
+    return list(points_discussion_collection.find({"topic_name_id": ObjectId(topic_id)}))
+
+def update_prompting_content(topic_id, prompting_summary):
+    points_discussion_collection.update_many(
+        {"topic_name_id": ObjectId(topic_id)},
+        {"$set": {"prompting": prompting_summary}}
+    )

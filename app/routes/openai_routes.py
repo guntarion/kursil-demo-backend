@@ -4,8 +4,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, parsing_test, elaborate_discussionpoint
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, parsing_test, elaborate_discussionpoint, generate_prompting_for_content_creation
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_prompting_content
 
 import logging
 
@@ -106,4 +106,27 @@ async def elaborate_points_of_discussion(request: ElaborationRequest):
         return {"elaborated_points": elaborated_points}
     except Exception as e:
         logger.error(f"Error in elaboration: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    
+class PromptingRequest(BaseModel):
+    topic_id: str
+
+@router.post("/generate-prompting")
+async def generate_prompting(request: PromptingRequest):
+    logger.debug("Received request for prompting generation")
+    try:
+        topic = get_topic_by_id(request.topic_id)
+        if not topic:
+            raise HTTPException(status_code=404, detail="Topic not found")
+        
+        elaborated_points = get_elaborated_points_by_topic_id(request.topic_id)
+        if not elaborated_points:
+            raise HTTPException(status_code=404, detail="Elaborated points not found for the given topic")
+        
+        prompting_summaries = generate_prompting_for_content_creation(elaborated_points)
+        update_prompting_content(request.topic_id, prompting_summaries)
+        
+        return {"prompting_summaries": prompting_summaries}
+    except Exception as e:
+        logger.error(f"Error in prompting generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,10 +1,14 @@
-Create a comprehensive prompt to elaborate on the discussion point "{discussion}" for topic of "{topic}". The Target Audience is PLN Persero employees with diverse educational backgrounds. It should provide sufficient depth for technical understanding without overwhelming non-technical employees.
+Given the following input for point of discussion {point_of_discussion}:
+{elaboration}
+
+Create a comprehensive prompt to elaborate on the discussion point "{point_of_discussion}". The Target Audience is PLN Persero employees with diverse educational backgrounds. It should provide sufficient depth for technical understanding without overwhelming non-technical employees.
 
 The prompt should guide the writing of a detailed section for a book chapter, covering essential aspects, relevant context, and potential subtopics. 
 
-**Input Example:**
+### Example Interaction:
 
-```
+User:
+
 ** Topic: Understanding Grid Stability and Reliability Issues
      - **Definition and Importance of Grid Stability:**
        - Explanation of grid stability and its role in ensuring a consistent power supply.
@@ -23,9 +27,8 @@ The prompt should guide the writing of a detailed section for a book chapter, co
        - Examination of grid stability issues experienced in Germany due to high renewable energy integration.
        - Analysis of the South Australian blackout and lessons learned.
   
-```
 
-**Output Example:**
+AI:
 
 
 Create a detailed and comprehensive section for a book chapter that addresses the provided discussion points. The content should be tailored for PLN Persero employees who have diverse educational backgrounds, ensuring that the explanations are technically informative yet understandable for non-technical staff.

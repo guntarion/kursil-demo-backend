@@ -33,25 +33,6 @@ def count_tokens(text):
     tokens = enc.encode(text)
     return len(tokens)
 
-def generate_summary(parsed_topics):
-    prompt = "Generate a concise and coherent summary of the learning objectives based on the following information about several learning topics. This summary will be included in a curriculum document to offer a general overview of what participants will achieve through the training program. The summary should integrate the objectives from each topic to highlight the program's overall educational goals, ensuring clarity and alignment with the intended learning outcomes. Provide only the summary and nothing else.\n\n"
-    
-    for topic in parsed_topics:
-        prompt += f"Topic: {topic['topic_name']}\nObjective: {topic['objective']}\n\n"
-
-    messages = [
-        {"role": "system", "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields."},
-        {"role": "user", "content": prompt}
-    ]
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages
-    )
-
-    summary = completion.choices[0].message.content.strip()
-    return summary
-
 def parse_generated_content(content):
     sections = content.split('\n\n')
     topics = []
@@ -225,6 +206,7 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
 
     return elaborated_points
 
+
 def parsing_test() -> List[Dict[str, str]]:
     hardcoded_text = """
 1. **Subtopic:** Understanding Grid Stability and Reliability Issues
@@ -313,3 +295,52 @@ def parsing_test() -> List[Dict[str, str]]:
 
     logger.debug(f"Parsed result: {elaborated_points}")
     return elaborated_points
+
+# This generate summary of topics
+def generate_summary(parsed_topics):
+    prompt = "Generate a concise and coherent summary of the learning objectives based on the following information about several learning topics. This summary will be included in a curriculum document to offer a general overview of what participants will achieve through the training program. The summary should integrate the objectives from each topic to highlight the program's overall educational goals, ensuring clarity and alignment with the intended learning outcomes. Provide only the summary and nothing else.\n\n"
+    
+    for topic in parsed_topics:
+        prompt += f"Topic: {topic['topic_name']}\nObjective: {topic['objective']}\n\n"
+
+    messages = [
+        {"role": "system", "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields."},
+        {"role": "user", "content": prompt}
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    summary = completion.choices[0].message.content.strip()
+    return summary
+
+def generate_prompting_for_content_creation(elaborated_points: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    prompt_template = read_prompt("./app/prompts/prompt_create_prompttowrite.txt")
+    prompting_results = []
+
+    for point in elaborated_points:
+        point_of_discussion = point['point_of_discussion']
+        elaboration = point['elaboration']
+        
+        prompt = prompt_template.replace("{point_of_discussion}", point_of_discussion)
+        prompt = prompt.replace("{elaboration}", elaboration)
+
+        messages = [
+            {"role": "system", "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields."},
+            {"role": "user", "content": prompt}
+        ]
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages
+        )
+
+        prompting_summary = completion.choices[0].message.content.strip()
+        prompting_results.append({
+            "point_of_discussion": point_of_discussion,
+            "prompting": prompting_summary
+        })
+
+    return prompting_results
