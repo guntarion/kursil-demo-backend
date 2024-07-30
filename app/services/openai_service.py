@@ -316,9 +316,9 @@ def generate_summary(parsed_topics):
     summary = completion.choices[0].message.content.strip()
     return summary
 
-def generate_prompting_for_content_creation(elaborated_points: List[Dict[str, str]]) -> List[Dict[str, str]]:
+async def generate_prompting_and_content(elaborated_points: List[Dict[str, str]], topic: str) -> List[Dict[str, str]]:
     prompt_template = read_prompt("./app/prompts/prompt_create_prompttowrite.txt")
-    prompting_results = []
+    results = []
 
     for point in elaborated_points:
         point_of_discussion = point['point_of_discussion']
@@ -338,9 +338,41 @@ def generate_prompting_for_content_creation(elaborated_points: List[Dict[str, st
         )
 
         prompting_summary = completion.choices[0].message.content.strip()
-        prompting_results.append({
+        
+        # Generate content using the prompting summary
+        content = await generate_content(prompting_summary, point_of_discussion)
+        
+        results.append({
             "point_of_discussion": point_of_discussion,
-            "prompting": prompting_summary
+            "prompting": prompting_summary,
+            "content": content
         })
+        
+        # Provide progress update
+        print(f"Finished creating content for '{point_of_discussion}'")
+        
+        # Add a delay between requests
+        await asyncio.sleep(2)  # 2-second delay
 
-    return prompting_results
+    return results
+
+async def generate_content(prompting: str, point_of_discussion: str) -> str:
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields. Create a detailed and comprehensive section for a book chapter that addresses the provided discussion points. The content should be tailored for PLN Persero employees who have diverse educational backgrounds, ensuring that the explanations are technically informative yet understandable for non-technical staff. The aim of this book chapter is to provide PLN Persero employees with a well-rounded understanding of the provided discussion points."
+        },
+        {
+            "role": "user",
+            "content": prompting
+        }
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    content = completion.choices[0].message.content
+    print(f"Generated content for '{point_of_discussion}'")
+    return content

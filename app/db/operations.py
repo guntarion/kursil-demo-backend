@@ -46,3 +46,27 @@ def update_prompting_content(topic_id, prompting_summary):
         {"topic_name_id": ObjectId(topic_id)},
         {"$set": {"prompting": prompting_summary}}
     )
+
+def update_content(topic_id, point_of_discussion, content):
+    points_discussion_collection.update_one(
+        {
+            "topic_name_id": ObjectId(topic_id),
+            "point_of_discussion": point_of_discussion
+        },
+        {"$set": {"handout": content}}
+    )
+
+def update_prompting_and_content(topic_id, results):
+    for result in results:
+        points_discussion_collection.update_one(
+            {
+                "topic_name_id": ObjectId(topic_id),
+                "point_of_discussion": result['point_of_discussion']
+            },
+            {
+                "$set": {
+                    "prompting": result['prompting'],
+                    "handout": result['content']
+                }
+            }
+        )
