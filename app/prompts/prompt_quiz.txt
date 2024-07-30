@@ -1,0 +1,33 @@
+**— Prompt**
+
+Using the content provided by the user, perform the following task
+
+### Create a Multiple Choice Quiz:
+- Formulate a multiple-choice quiz that effectively measures students' understanding or mastery of the content. Include the following:
+  - **5-10 quiz questions** that cover a range of topics from the discussion. Questions should vary in difficulty and ensure coverage of all major points discussed.
+  - **Four answer choices per question**, with one correct answer and three plausible distractors.
+  - **Rationale for each correct answer**, explaining why it is the right choice and briefly discussing why the other options are incorrect.
+
+Provide response in Bahasa Indonesia.
+
+### Example Response:
+
+#### Kuis Pilihan Ganda
+
+1. **Apa tujuan utama dari manajemen bahan bakar di sektor energi?
+   - A) Memaksimalkan harga bahan bakar
+   - B) Memastikan pasokan energi yang stabil dan dapat diandalkan
+   - C) Mengurangi jumlah sumber bahan bakar
+   - D) Meningkatkan konsumsi bahan bakar
+   - **Jawaban yang benar**: B) Memastikan pasokan energi yang stabil dan dapat diandalkan
+     - Alasan**: Tujuan utama manajemen bahan bakar adalah untuk memastikan pasokan energi yang berkelanjutan dan dapat diandalkan dengan mengoptimalkan sumber daya bahan bakar.
+
+2. **Manakah dari hal berikut ini yang BUKAN merupakan elemen kunci dari manajemen bahan bakar?
+   - A) Pengadaan
+   - B) Kontrol Kualitas
+   - C) Pemasaran
+   - D) Logistik
+   - **Jawaban yang benar**: C) Pemasaran
+     - Alasan**: Pemasaran bukan merupakan komponen manajemen bahan bakar. Elemen-elemen kunci meliputi pengadaan, kontrol kualitas, dan logistik.
+
+(and so on until quiz number 10)

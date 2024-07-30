@@ -109,3 +109,39 @@ def update_misc_points(point_id: str, misc_points: dict):
         logger.error(f"Error updating misc points for point of discussion {point_id}: {str(e)}")
         raise
 
+def update_quiz(point_id: str, quiz_content: str):
+    logger.info(f"Updating quiz for point of discussion: {point_id}")
+    try:
+        # Log the input parameters
+        logger.debug(f"Point ID: {point_id}")
+        logger.debug(f"Quiz content length: {len(quiz_content)}")
+
+        # Ensure point_id is a valid ObjectId
+        object_id = ObjectId(point_id)
+
+        # Perform the update operation
+        result = points_discussion_collection.update_one(
+            {"_id": object_id},
+            {"$set": {"quiz": quiz_content}}
+        )
+
+        # Log the result of the update operation
+        logger.info(f"Update result: matched {result.matched_count}, modified {result.modified_count}")
+
+        if result.matched_count == 0:
+            logger.warning(f"No document found for point of discussion: {point_id}")
+        elif result.modified_count == 0:
+            logger.warning(f"Document found but not modified for point of discussion: {point_id}")
+        else:
+            logger.info(f"Successfully updated quiz for point of discussion: {point_id}")
+
+        # Verify the update
+        updated_doc = points_discussion_collection.find_one({"_id": object_id})
+        if updated_doc:
+            logger.debug(f"Updated document: {updated_doc}")
+        else:
+            logger.warning(f"Could not retrieve updated document for point of discussion: {point_id}")
+
+    except Exception as e:
+        logger.error(f"Error updating quiz for point of discussion {point_id}: {str(e)}", exc_info=True)
+        raise

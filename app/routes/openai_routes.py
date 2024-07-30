@@ -4,8 +4,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting, generate_handout, generate_misc_points
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting, generate_handout, generate_misc_points, generate_quiz
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz
 
 import logging
 
@@ -243,3 +243,40 @@ async def process_misc_points(point_id: str, point_of_discussion: str, handout: 
         logger.info(f"Updated database with misc points for point of discussion: {point_id}")
     except Exception as e:
         logger.error(f"Error in background misc points generation: {str(e)}", exc_info=True)
+
+@router.post("/generate-quiz")
+async def generate_quiz_route(request: PromptingRequest, background_tasks: BackgroundTasks):
+    logger.debug(f"Received request to generate quiz for point of discussion: {request.point_of_discussion_id}")
+    try:
+        point = get_point_of_discussion(request.point_of_discussion_id)
+        if not point:
+            raise HTTPException(status_code=404, detail="Point of discussion not found")
+        
+        if not point.get('handout'):
+            raise HTTPException(status_code=400, detail="Handout not found. Please generate handout first.")
+        
+        # Start the generation process in the background
+        background_tasks.add_task(process_quiz, request.point_of_discussion_id, point['point_of_discussion'], point['handout'])
+        
+        return {"message": "Quiz generation started in the background"}
+    except Exception as e:
+        logger.error(f"Error in quiz generation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_quiz(point_id: str, point_of_discussion: str, handout: str):
+    try:
+        quiz_content = generate_quiz(point_of_discussion, handout)
+        logger.info(f"Generated quiz for point of discussion: {point_id}")
+        logger.debug(f"Quiz content length: {len(quiz_content)}")
+
+        if not quiz_content:
+            logger.warning(f"Generated quiz content is empty for point of discussion: {point_id}")
+            return
+
+        try:
+            update_quiz(point_id, quiz_content)
+            logger.info(f"Updated database with quiz for point of discussion: {point_id}")
+        except Exception as db_error:
+            logger.error(f"Error updating database with quiz for point of discussion {point_id}: {str(db_error)}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error in background quiz generation for point of discussion {point_id}: {str(e)}", exc_info=True)

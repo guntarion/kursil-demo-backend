@@ -360,3 +360,41 @@ def generate_misc_points(point_of_discussion: str, handout: str) -> dict:
     except Exception as e:
         logger.error(f"Error generating misc points: {str(e)}")
         raise
+
+def generate_quiz(point_of_discussion: str, handout: str) -> str:
+    prompt_template = read_prompt("./app/prompts/prompt_quiz.txt")
+    my_prompt = prompt_template + f"The topic is {point_of_discussion} and here's the information: {handout}"
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields. Provide response in bahasa Indonesia."
+        },
+        {
+            "role": "user",
+            "content": my_prompt
+        }
+    ]
+
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages
+        )
+
+        response = completion.choices[0].message.content.strip()
+        logger.debug(f"OpenAI response for quiz: {response}")
+
+        # Extract the quiz content
+        quiz_match = re.search(r'#### Kuis Pilihan Ganda\s*(.*)', response, re.DOTALL)
+        if quiz_match:
+            quiz_content = quiz_match.group(1).strip()
+            logger.debug(f"Extracted quiz content: {quiz_content}")
+            return quiz_content
+        else:
+            logger.warning("Quiz content not found in the response")
+            return ""
+
+    except Exception as e:
+        logger.error(f"Error generating quiz: {str(e)}")
+        raise
