@@ -225,46 +225,6 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
 
     return elaborated_points
 
-async def generate_prompting_and_content(elaborated_points: List[Dict[str, str]], topic: str) -> List[Dict[str, str]]:
-    prompt_template = read_prompt("./app/prompts/prompt_create_prompttowrite.txt")
-    results = []
-
-    for point in elaborated_points:
-        point_of_discussion = point['point_of_discussion']
-        elaboration = point['elaboration']
-        
-        prompt = prompt_template.replace("{point_of_discussion}", point_of_discussion)
-        prompt = prompt.replace("{elaboration}", elaboration)
-
-        messages = [
-            {"role": "system", "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields."},
-            {"role": "user", "content": prompt}
-        ]
-
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages
-        )
-
-        prompting_summary = completion.choices[0].message.content.strip()
-        
-        # Generate content using the prompting summary
-        content = await generate_content(prompting_summary, point_of_discussion)
-        
-        results.append({
-            "point_of_discussion": point_of_discussion,
-            "prompting": prompting_summary,
-            "content": content
-        })
-        
-        # Provide progress update
-        print(f"Finished creating content for '{point_of_discussion}'")
-        
-        # Add a delay between requests
-        await asyncio.sleep(2)  # 2-second delay
-
-    return results
-
 async def generate_content(prompting: str, point_of_discussion: str) -> str:
     messages = [
         {
@@ -286,8 +246,8 @@ async def generate_content(prompting: str, point_of_discussion: str) -> str:
     print(f"Generated content for '{point_of_discussion}'")
     return content
 
-# Individual functions to generate prompting
-def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
+# 🔰 Individual functions to generate prompting
+async def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
     prompt_template = read_prompt("./app/prompts/prompt_create_prompttowrite.txt")
     
     prompt = prompt_template.replace("{point_of_discussion}", point_of_discussion)
@@ -298,7 +258,9 @@ def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
         {"role": "user", "content": prompt}
     ]
 
-    completion = client.chat.completions.create(
+    # Use asyncio.to_thread to run the synchronous OpenAI call in a separate thread
+    completion = await asyncio.to_thread(
+        client.chat.completions.create,
         model="gpt-4o-mini",
         messages=messages
     )

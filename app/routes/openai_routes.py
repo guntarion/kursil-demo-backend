@@ -1,12 +1,17 @@
 # fastapi app/routes/openai_routes.py
+import json
 import logging
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
+from fastapi.responses import StreamingResponse
+from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting, generate_handout, generate_misc_points, generate_quiz
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting, generate_handout, generate_misc_points, generate_quiz
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id
 
+import asyncio
+import random
 import logging
 
 logger = logging.getLogger(__name__)
@@ -130,40 +135,6 @@ async def generate_content_route(request: ContentGenerationRequest):
 class ContentGenerationRequest(BaseModel):
     topic_id: str
 
-
-@router.post("/generate-prompting-and-content")
-async def generate_prompting_and_content_route(request: ContentGenerationRequest, background_tasks: BackgroundTasks):
-    logger.debug("Received request for prompting and content generation")
-    try:
-        topic = get_topic_by_id(request.topic_id)
-        if not topic:
-            raise HTTPException(status_code=404, detail="Topic not found")
-        
-        elaborated_points = get_elaborated_points_by_topic_id(request.topic_id)
-        if not elaborated_points:
-            raise HTTPException(status_code=404, detail="Elaborated points not found for the given topic")
-        
-        # Start the generation process in the background
-        background_tasks.add_task(process_prompting_and_content, request.topic_id, elaborated_points, topic['topic_name'])
-        
-        return {"message": "Prompting and content generation started in the background"}
-    except Exception as e:
-        logger.error(f"Error in prompting and content generation: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-async def process_prompting_and_content(topic_id: str, elaborated_points: List[Dict[str, str]], topic_name: str):
-    try:
-        results = await generate_prompting_and_content(elaborated_points, topic_name)
-        update_prompting_and_content(topic_id, results)
-        logger.info(f"Completed prompting and content generation for topic: {topic_name}")
-    except Exception as e:
-        logger.error(f"Error in background prompting and content generation: {str(e)}", exc_info=True)
-
-
-
-
-
-
 class PromptingRequest(BaseModel):
     point_of_discussion_id: str
 
@@ -190,6 +161,7 @@ async def generate_prompting_route(request: PromptingRequest):
         logger.error(f"Error in prompting generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     
+
 @router.post("/generate-handout")
 async def generate_handout_route(request: PromptingRequest):
     logger.debug(f"Received request to generate handout for point of discussion: {request.point_of_discussion_id}")
@@ -286,30 +258,107 @@ class TopicPromptingRequest(BaseModel):
     topic_id: str
 
 @router.post("/generate-topic-prompting")
-async def generate_topic_prompting_route(request: TopicPromptingRequest, background_tasks: BackgroundTasks):
-    logger.debug(f"Received request to generate prompting for topic: {request.topic_id}")
+async def generate_topic_prompting_route(request: Request, topic_request: TopicPromptingRequest):
+    logger.debug(f"Received request to generate prompting for topic: {topic_request.topic_id}")
+    try:
+        points = get_points_discussion_ids_by_topic_id(topic_request.topic_id)
+        if not points:
+            raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
+        
+        return EventSourceResponse(process_topic_prompting(points), ping=3)
+    except Exception as e:
+        logger.error(f"Error in topic prompting generation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_topic_prompting(points):
+    total_points = len(points)
+    for i, point in enumerate(points, 1):
+        try:
+            point_data = get_point_of_discussion(point['id'])
+            if not point_data.get('prompting'):
+                prompting = await generate_prompting(point_data['elaboration'], point_data['point_of_discussion'])
+                await update_prompting(point['id'], prompting)
+                logger.info(f"Generated prompting for point: {point['id']}")
+            else:
+                logger.info(f"Prompting already exists for point: {point['id']}")
+            
+            progress = (i / total_points) * 100
+            yield {
+                "event": "progress",
+                "data": json.dumps({"progress": progress, "message": f"Processed point {i} of {total_points}"})
+            }
+            await asyncio.sleep(0.1)  # Small delay to avoid overwhelming the client
+        except Exception as e:
+            logger.error(f"Error generating prompting for point {point['id']}: {str(e)}", exc_info=True)
+            yield {
+                "event": "error",
+                "data": json.dumps(f"Error processing point {i}: {str(e)}")
+            }
+
+    yield {
+        "event": "complete",
+        "data": json.dumps("Prompting generation completed")
+    }
+
+
+class TopicHandoutRequest(BaseModel):
+    topic_id: str
+
+@router.post("/generate-topic-handout")
+async def generate_topic_handout_route(request: TopicHandoutRequest, background_tasks: BackgroundTasks):
+    logger.debug(f"Received request to generate handout for topic: {request.topic_id}")
     try:
         points = get_points_discussion_ids_by_topic_id(request.topic_id)
         if not points:
             raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
         
         # Start the generation process in the background
-        background_tasks.add_task(process_topic_prompting, points)
+        background_tasks.add_task(process_topic_handout, points)
         
-        return {"message": f"Prompting generation started for {len(points)} points of discussion"}
+        return {"message": f"Handout generation started for {len(points)} points of discussion"}
     except Exception as e:
-        logger.error(f"Error in topic prompting generation: {str(e)}", exc_info=True)
+        logger.error(f"Error in topic handout generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-async def process_topic_prompting(points):
+async def process_topic_handout(points):
     for point in points:
         try:
             point_data = get_point_of_discussion(point['id'])
-            if not point_data.get('prompting'):
-                prompting = generate_prompting(point_data['elaboration'], point_data['point_of_discussion'])
-                update_prompting(point['id'], prompting)
-                logger.info(f"Generated prompting for point: {point['id']}")
+            if not point_data.get('handout'):
+                if not point_data.get('prompting'):
+                    logger.warning(f"Prompting not found for point: {point['id']}. Skipping handout generation.")
+                    continue
+                handout = generate_handout(point_data['point_of_discussion'], point_data['prompting'])
+                update_handout(point['id'], handout)
+                logger.info(f"Generated handout for point: {point['id']}")
             else:
-                logger.info(f"Prompting already exists for point: {point['id']}")
+                logger.info(f"Handout already exists for point: {point['id']}")
         except Exception as e:
-            logger.error(f"Error generating prompting for point {point['id']}: {str(e)}", exc_info=True)
+            logger.error(f"Error generating handout for point {point['id']}: {str(e)}", exc_info=True)
+
+# Existing code...
+
+
+
+# For Testing
+class TopicPromptingRequest(BaseModel):
+    topic_id: str
+
+@router.post("/mock-generate-topic-prompting")
+async def mock_generate_topic_prompting_route(request: Request, topic_request: TopicPromptingRequest):
+    return EventSourceResponse(mock_process_topic_prompting(topic_request.topic_id))
+
+async def mock_process_topic_prompting(topic_id: str):
+    total_steps = 5
+    for i in range(1, total_steps + 1):
+        await asyncio.sleep(random.uniform(0.5, 2))
+        progress = (i / total_steps) * 100
+        yield {
+            "event": "progress",
+            "data": json.dumps({"progress": progress, "message": f"Processed step {i} of {total_steps}"})
+        }
+    await asyncio.sleep(1)
+    yield {
+        "event": "complete",
+        "data": json.dumps("Prompting generation completed")
+    }

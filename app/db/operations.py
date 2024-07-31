@@ -2,7 +2,9 @@
 
 from .database import main_topic_collection, list_topics_collection, points_discussion_collection
 from bson import ObjectId
+
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +24,8 @@ def add_elaborated_point(point_of_discussion, elaboration, topic_name_id):
     print("add_elaborated_point", point_of_discussion, topic_name_id)
     return points_discussion_collection.insert_one({
         "point_of_discussion": point_of_discussion,
-        "elaboration": elaboration,
         "topic_name_id": topic_name_id,
+        "elaboration": elaboration,
         "learn_objective": "",
         "assessment": "",
         "prompting": "",
@@ -34,7 +36,13 @@ def add_elaborated_point(point_of_discussion, elaboration, topic_name_id):
         "discussion": "",
         "method": "",
         "duration": "",
-        "casestudy": ""
+        "casestudy": "",
+        "cost_elaboration": "",
+        "cost_prompting": "",
+        "cost_handout": "",
+        "cost_quiz": "",
+        "cost_quiz": "",
+        "cost_presentation": ""
     })
 
 def get_elaborated_points_by_topic_id(topic_name_id):
@@ -60,21 +68,6 @@ def update_content(topic_id, point_of_discussion, content):
         },
         {"$set": {"handout": content}}
     )
-
-def update_prompting_and_content(topic_id, results):
-    for result in results:
-        points_discussion_collection.update_one(
-            {
-                "topic_name_id": ObjectId(topic_id),
-                "point_of_discussion": result['point_of_discussion']
-            },
-            {
-                "$set": {
-                    "prompting": result['prompting'],
-                    "handout": result['content']
-                }
-            }
-        )
 
 def get_point_of_discussion(point_id: str):
     return points_discussion_collection.find_one({"_id": ObjectId(point_id)})
