@@ -65,6 +65,24 @@ def parse_generated_content(content):
 
     return parsed_topics
 
+def generate_summary(parsed_topics):
+    prompt = "Generate a concise and coherent summary of the learning objectives based on the following information about several learning topics. This summary will be included in a curriculum document to offer a general overview of what participants will achieve through the training program. The summary should integrate the objectives from each topic to highlight the program's overall educational goals, ensuring clarity and alignment with the intended learning outcomes. Provide only the summary and nothing else.\n\n"
+
+    for topic in parsed_topics:
+        prompt += f"Topic: {topic['topic_name']}\nObjective: {topic['objective']}\n\n"
+
+    messages = [
+        {"role": "system", "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields."},
+        {"role": "user", "content": prompt}
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    summary = completion.choices[0].message.content.strip()
+    return summary
 
 def create_listof_topic(topic):
     # Read the prompt template

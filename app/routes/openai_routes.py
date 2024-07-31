@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
 from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting_and_content, generate_prompting, generate_handout, generate_misc_points, generate_quiz
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, update_prompting_and_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id
 
 import logging
 
@@ -57,6 +57,19 @@ async def get_main_topic_details(main_topic_id: str):
         logging.error(f"Error in get_main_topic_details: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     
+@router.get("/points-discussion/{topic_id}")
+async def get_points_discussion(topic_id: str):
+    try:
+        points_discussion = get_points_discussion_by_topic_id(topic_id)
+        if not points_discussion:
+            raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
+        return convert_objectid_to_str(points_discussion)
+    except Exception as e:
+        logger.error(f"Error in get_points_discussion: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 class TranslationRequest(BaseModel):
     points: List[str]
 
@@ -67,19 +80,6 @@ async def translate_points_of_discussion(request: TranslationRequest):
         return {"translated_points": translated_points}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))    
-
-class ElaborationRequest(BaseModel):
-    topic: str
-    objective: str
-    points_of_discussion: List[str]
-
-@router.post("/elaborate-points")
-async def elaborate_points_of_discussion(request: ElaborationRequest):
-    try:
-        elaborated_points = elaborate_discussionpoint(request.topic, request.objective, request.points_of_discussion)
-        return {"elaborated_points": elaborated_points}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))   
 
 class ElaborationRequest(BaseModel):
     topic: str
@@ -158,6 +158,9 @@ async def process_prompting_and_content(topic_id: str, elaborated_points: List[D
         logger.info(f"Completed prompting and content generation for topic: {topic_name}")
     except Exception as e:
         logger.error(f"Error in background prompting and content generation: {str(e)}", exc_info=True)
+
+
+
 
 
 
@@ -278,3 +281,35 @@ async def process_quiz(point_id: str, point_of_discussion: str, handout: str):
             logger.error(f"Error updating database with quiz for point of discussion {point_id}: {str(db_error)}", exc_info=True)
     except Exception as e:
         logger.error(f"Error in background quiz generation for point of discussion {point_id}: {str(e)}", exc_info=True)
+
+class TopicPromptingRequest(BaseModel):
+    topic_id: str
+
+@router.post("/generate-topic-prompting")
+async def generate_topic_prompting_route(request: TopicPromptingRequest, background_tasks: BackgroundTasks):
+    logger.debug(f"Received request to generate prompting for topic: {request.topic_id}")
+    try:
+        points = get_points_discussion_ids_by_topic_id(request.topic_id)
+        if not points:
+            raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
+        
+        # Start the generation process in the background
+        background_tasks.add_task(process_topic_prompting, points)
+        
+        return {"message": f"Prompting generation started for {len(points)} points of discussion"}
+    except Exception as e:
+        logger.error(f"Error in topic prompting generation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_topic_prompting(points):
+    for point in points:
+        try:
+            point_data = get_point_of_discussion(point['id'])
+            if not point_data.get('prompting'):
+                prompting = generate_prompting(point_data['elaboration'], point_data['point_of_discussion'])
+                update_prompting(point['id'], prompting)
+                logger.info(f"Generated prompting for point: {point['id']}")
+            else:
+                logger.info(f"Prompting already exists for point: {point['id']}")
+        except Exception as e:
+            logger.error(f"Error generating prompting for point {point['id']}: {str(e)}", exc_info=True)

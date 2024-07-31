@@ -24,6 +24,8 @@ def add_elaborated_point(point_of_discussion, elaboration, topic_name_id):
         "point_of_discussion": point_of_discussion,
         "elaboration": elaboration,
         "topic_name_id": topic_name_id,
+        "learn_objective": "",
+        "assessment": "",
         "prompting": "",
         "handout": "",
         "outline": "",
@@ -76,6 +78,9 @@ def update_prompting_and_content(topic_id, results):
 
 def get_point_of_discussion(point_id: str):
     return points_discussion_collection.find_one({"_id": ObjectId(point_id)})
+
+def get_points_discussion_by_topic_id(topic_id):
+    return list(points_discussion_collection.find({"topic_name_id": ObjectId(topic_id)}))
 
 def update_prompting(point_id: str, prompting: str):
     points_discussion_collection.update_one(
@@ -145,3 +150,10 @@ def update_quiz(point_id: str, quiz_content: str):
     except Exception as e:
         logger.error(f"Error updating quiz for point of discussion {point_id}: {str(e)}", exc_info=True)
         raise
+
+def get_points_discussion_ids_by_topic_id(topic_id):
+    points = list(points_discussion_collection.find(
+        {"topic_name_id": ObjectId(topic_id)},
+        {"_id": 1, "point_of_discussion": 1}
+    ))
+    return [{"id": str(point["_id"]), "point": point["point_of_discussion"]} for point in points]    
