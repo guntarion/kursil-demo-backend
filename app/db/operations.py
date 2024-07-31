@@ -93,10 +93,9 @@ def update_misc_points(point_id: str, misc_points: dict):
         result = points_discussion_collection.update_one(
             {"_id": ObjectId(point_id)},
             {"$set": {
-                "method": misc_points.get("method", ""),
-                "quiz": misc_points.get("quiz", ""),
-                "assessment": misc_points.get("assessment", ""),
                 "learn_objective": misc_points.get("learn_objective", ""),
+                "assessment": misc_points.get("assessment", ""),
+                "method": misc_points.get("method", ""),
                 "duration": misc_points.get("duration")
             }}
         )

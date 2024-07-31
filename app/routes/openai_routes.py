@@ -7,8 +7,8 @@ from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint, generate_content, generate_prompting, generate_handout, generate_misc_points, generate_quiz
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id, update_content, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id,  get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id
 
 import asyncio
 import random
@@ -102,38 +102,6 @@ async def elaborate_points_of_discussion(request: ElaborationRequest):
         logger.error(f"Error in elaboration: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     
-class ContentGenerationRequest(BaseModel):
-    topic_id: str
-
-@router.post("/generate-content")
-async def generate_content_route(request: ContentGenerationRequest):
-    logger.debug("Received request for content generation")
-    try:
-        topic = get_topic_by_id(request.topic_id)
-        if not topic:
-            raise HTTPException(status_code=404, detail="Topic not found")
-        
-        elaborated_points = get_elaborated_points_by_topic_id(request.topic_id)
-        if not elaborated_points:
-            raise HTTPException(status_code=404, detail="Elaborated points not found for the given topic")
-        
-        generated_contents = []
-        for point in elaborated_points:
-            if point.get('prompting'):
-                content = generate_content(point['prompting'])
-                update_content(request.topic_id, point['point_of_discussion'], content)
-                generated_contents.append({
-                    "point_of_discussion": point['point_of_discussion'],
-                    "content": content
-                })
-        
-        return {"generated_contents": generated_contents}
-    except Exception as e:
-        logger.error(f"Error in content generation: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-class ContentGenerationRequest(BaseModel):
-    topic_id: str
 
 class PromptingRequest(BaseModel):
     point_of_discussion_id: str
@@ -336,7 +304,6 @@ async def process_topic_handout(points):
         except Exception as e:
             logger.error(f"Error generating handout for point {point['id']}: {str(e)}", exc_info=True)
 
-# Existing code...
 
 
 
@@ -362,3 +329,71 @@ async def mock_process_topic_prompting(topic_id: str):
         "event": "complete",
         "data": json.dumps("Prompting generation completed")
     }
+
+
+class TopicMiscRequest(BaseModel):
+    topic_id: str
+
+@router.post("/generate-topic-misc")
+async def generate_topic_misc_route(request: TopicMiscRequest, background_tasks: BackgroundTasks):
+    logger.debug(f"Received request to generate misc points for topic: {request.topic_id}")
+    try:
+        points = get_points_discussion_ids_by_topic_id(request.topic_id)
+        if not points:
+            raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
+        
+        # Start the generation process in the background
+        background_tasks.add_task(process_topic_misc, points)
+        
+        return {"message": f"Misc points generation started for {len(points)} points of discussion"}
+    except Exception as e:
+        logger.error(f"Error in topic misc points generation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_topic_misc(points):
+    for point in points:
+        try:
+            point_data = get_point_of_discussion(point['id'])
+            if not point_data.get('handout'):
+                logger.warning(f"Handout not found for point: {point['id']}. Skipping misc points generation.")
+                continue
+            misc_points = generate_misc_points(point_data['point_of_discussion'], point_data['handout'])
+            update_misc_points(point['id'], misc_points)
+            logger.info(f"Generated misc points for point of discussion: {point['id']}")
+        except Exception as e:
+            logger.error(f"Error generating misc points for point {point['id']}: {str(e)}", exc_info=True)
+
+class TopicQuizRequest(BaseModel):
+    topic_id: str
+
+@router.post("/generate-topic-quiz")
+async def generate_topic_quiz_route(request: TopicQuizRequest, background_tasks: BackgroundTasks):
+    logger.debug(f"Received request to generate quiz for topic: {request.topic_id}")
+    try:
+        points = get_points_discussion_ids_by_topic_id(request.topic_id)
+        if not points:
+            raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
+        
+        # Start the generation process in the background
+        background_tasks.add_task(process_topic_quiz, points)
+        
+        return {"message": f"Quiz generation started for {len(points)} points of discussion"}
+    except Exception as e:
+        logger.error(f"Error in topic quiz generation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_topic_quiz(points):
+    for point in points:
+        try:
+            point_data = get_point_of_discussion(point['id'])
+            if not point_data.get('handout'):
+                logger.warning(f"Handout not found for point: {point['id']}. Skipping quiz generation.")
+                continue
+            quiz_content = generate_quiz(point_data['point_of_discussion'], point_data['handout'])
+            if not quiz_content:
+                logger.warning(f"Generated quiz content is empty for point of discussion: {point['id']}")
+                continue
+            update_quiz(point['id'], quiz_content)
+            logger.info(f"Generated and stored quiz for point of discussion: {point['id']}")
+        except Exception as e:
+            logger.error(f"Error generating quiz for point {point['id']}: {str(e)}", exc_info=True)

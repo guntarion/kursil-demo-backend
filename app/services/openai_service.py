@@ -225,26 +225,6 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
 
     return elaborated_points
 
-async def generate_content(prompting: str, point_of_discussion: str) -> str:
-    messages = [
-        {
-            "role": "system",
-            "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields. Create a detailed and comprehensive section for a book chapter that addresses the provided discussion points. The content should be tailored for PLN Persero employees who have diverse educational backgrounds, ensuring that the explanations are technically informative yet understandable for non-technical staff. The aim of this book chapter is to provide PLN Persero employees with a well-rounded understanding of the provided discussion points."
-        },
-        {
-            "role": "user",
-            "content": prompting
-        }
-    ]
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages
-    )
-
-    content = completion.choices[0].message.content
-    print(f"Generated content for '{point_of_discussion}'")
-    return content
 
 # 🔰 Individual functions to generate prompting
 async def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
