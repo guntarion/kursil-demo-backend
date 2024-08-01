@@ -1,6 +1,6 @@
 # app/db/operations.py
 
-from .database import main_topic_collection, list_topics_collection, points_discussion_collection
+from .database import main_topic_collection, list_topics_collection, points_discussion_collection, cost_ai_collection
 from bson import ObjectId
 
 import logging

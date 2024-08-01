@@ -8,8 +8,9 @@ from typing import List, Dict
 from dotenv import load_dotenv
 import tiktoken
 from app.services.cost_calculator import calculate_cost
-from app.db.database import main_topic_collection, list_topics_collection
-from app.db.operations import get_topic_by_name, add_elaborated_point
+from app.db.database import main_topic_collection, list_topics_collection, cost_ai_collection
+from app.db.operations import get_topic_by_name, add_elaborated_point, add_elaborated_point, get_topic_by_name
+from datetime import datetime
 
 import logging
 
@@ -165,6 +166,8 @@ def translate_points(points: List[str]) -> List[str]:
     translated_points = translated_text.split('\n')
     return [point.split('. ', 1)[1] if '. ' in point else point for point in translated_points]
 
+
+
 def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: List[str]) -> List[Dict[str, str]]:
     prompt_template = read_prompt("./app/prompts/prompt_detaillistof_discussionpoint.txt")
 
@@ -176,13 +179,21 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
         {"role": "user", "content": prompt}
     ]
 
+    # Calculate input tokens
+    input_token_count = count_tokens(prompt)
+
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages
     )
 
     elaborated_content = completion.choices[0].message.content.strip()
-    # print("\n\nelaborated_content", elaborated_content)
+
+    # Calculate output tokens
+    output_token_count = count_tokens(elaborated_content)
+
+    # Calculate cost
+    total_cost_idr = calculate_cost(input_token_count, output_token_count)
 
     # Parse the elaborated content into a structured format
     elaborated_points = []
@@ -213,15 +224,23 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
             "elaboration": '\n'.join(current_elaboration)
         })
 
-    # logger.debug(f"Parsed result: {elaborated_points}")
-
-    # Store elaborated points in the database
+    # Store elaborated points in the database and get the topic_id
     topic_doc = get_topic_by_name(topic)
+    topic_id = None
     if topic_doc:
         topic_id = topic_doc['_id']
-        # print("🚀 ~ topic_id:", topic_id)
         for point in elaborated_points:
             add_elaborated_point(point['subtopic'], point['elaboration'], topic_id)
+
+    # Store cost information in cost_ai_collection
+    cost_data = {
+        "datetime": datetime.utcnow(),
+        "topic_id": topic_id,  
+        "content": topic,
+        "process_name": "elaboration",
+        "cost": round(total_cost_idr)  
+    }
+    cost_ai_collection.insert_one(cost_data)
 
     return elaborated_points
 
