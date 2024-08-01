@@ -177,3 +177,4 @@ async def get_total_cost_by_topic(topic_id: str):
     ]
     result = await cost_ai_collection.aggregate(pipeline).to_list(length=1)
     return result[0]["total_cost"] if result else 0
+

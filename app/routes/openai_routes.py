@@ -13,28 +13,7 @@ from app.services.openai_service import create_listof_topic, translate_points, e
 from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id,  get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id
 from enum import Enum
 
-
-class TaskStatus(Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-task_tracker = {}
 logger = logging.getLogger(__name__)
-
-def generate_task_id():
-    return str(ObjectId())
-
-def update_task_status(task_id: str, status: TaskStatus):
-    task_tracker[task_id] = status
-
-def update_task_progress(task_id: str, progress: float, message: str):
-    if task_id in task_tracker:
-        task_tracker[task_id] = {
-            "status": TaskStatus.PENDING,
-            "progress": progress,
-            "message": message
-        }    
 
 class TopicRequest(BaseModel):
     topic: str
@@ -49,40 +28,6 @@ def convert_objectid_to_str(obj):
     elif isinstance(obj, ObjectId):
         return str(obj)
     return obj
-
-
-# @router.get("/task-status/{task_id}")
-# async def get_task_status(task_id: str):
-#     if task_id not in task_tracker:
-#         raise HTTPException(status_code=404, detail="Task not found")
-#     return {"status": task_tracker[task_id].value}
-def update_task_progress(task_id: str, progress: float, message: str):
-    if task_id in task_tracker:
-        task_tracker[task_id] = {
-            "status": TaskStatus.PENDING,
-            "progress": progress,
-            "message": message
-        }
-
-@router.get("/task-status/{task_id}")
-async def get_task_status(task_id: str):
-    if task_id not in task_tracker:
-        raise HTTPException(status_code=404, detail="Task not found")
-    task_info = task_tracker[task_id]
-    return {
-        "status": task_info["status"].value if isinstance(task_info, dict) else task_info.value,
-        "progress": task_info.get("progress", 0) if isinstance(task_info, dict) else 0,
-        "message": task_info.get("message", "") if isinstance(task_info, dict) else ""
-    }
-
-def update_task_status(task_id: str, status: TaskStatus):
-    if task_id in task_tracker:
-        if isinstance(task_tracker[task_id], dict):
-            task_tracker[task_id]["status"] = status
-        else:
-            task_tracker[task_id] = status
-    else:
-        task_tracker[task_id] = status
 
 @router.post("/list-of-topics/")
 async def generate_list_of_topics(request: TopicRequest):
@@ -125,8 +70,6 @@ async def get_points_discussion(topic_id: str):
     except Exception as e:
         logger.error(f"Error Data Not Found in get_points_discussion: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-
-
 
 class TranslationRequest(BaseModel):
     points: List[str]

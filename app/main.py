@@ -2,6 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.openai_routes import router as openai_router
+from app.routes.document_routes import router as document_routes
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -19,6 +20,7 @@ app.add_middleware(
 
 # Include the openai router
 app.include_router(openai_router, prefix="/api", tags=["openai"])
+app.include_router(document_routes, prefix="/api", tags=["documents"])
 
 @app.get("/")
 async def read_root():
