@@ -338,40 +338,41 @@ async def generate_topic_handout_route(request: TopicHandoutRequest):
         if not points:
             raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
         
-        task_id = generate_task_id()
-        update_task_status(task_id, TaskStatus.PENDING)
+        results = await process_topic_handout(points)
         
-        # Start the generation process in the background
-        asyncio.create_task(process_topic_handout(points, task_id))
-        
-        return {"message": f"Handout generation started for {len(points)} points of discussion", "task_id": task_id}
+        return {"message": f"Handout generation completed for {len(points)} points of discussion", "results": results}
     except Exception as e:
         logger.error(f"Error in topic handout generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-async def process_topic_handout(points, task_id):
-    try:
-        for point in points:
-            point_data = await get_point_of_discussion(point['id'])
-            if not point_data:
-                logger.warning(f"Point data not found for id: {point['id']}")
+async def process_topic_handout(points):
+    results = []
+    for point in points:
+        point_data = await get_point_of_discussion(point['id'])
+        if not point_data:
+            logger.warning(f"Point data not found for id: {point['id']}")
+            results.append({"point_id": point['id'], "status": "failed", "reason": "Point data not found"})
+            continue
+        
+        if not point_data.get('handout'):
+            if not point_data.get('prompting'):
+                logger.warning(f"Prompting not found for point: {point['id']}. Skipping handout generation.")
+                results.append({"point_id": point['id'], "status": "skipped", "reason": "Prompting not found"})
                 continue
             
-            if not point_data.get('handout'):
-                if not point_data.get('prompting'):
-                    logger.warning(f"Prompting not found for point: {point['id']}. Skipping handout generation.")
-                    continue
-                
-                handout = await generate_handout(point_data['point_of_discussion'], point_data['prompting'], str(point_data['topic_name_id']))
+            handout = await generate_handout(point_data['point_of_discussion'], point_data['prompting'], str(point_data['topic_name_id']))
+            if handout:
                 await update_handout(point['id'], handout)
                 logger.info(f"Generated handout for point: {point['id']}")
+                results.append({"point_id": point['id'], "status": "generated"})
             else:
-                logger.info(f"Handout already exists for point: {point['id']}")
-        
-        update_task_status(task_id, TaskStatus.COMPLETED)
-    except Exception as e:
-        logger.error(f"Error in handout generation: {str(e)}", exc_info=True)
-        update_task_status(task_id, TaskStatus.FAILED)
+                logger.warning(f"Failed to generate handout for point: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed", "reason": "Handout generation failed"})
+        else:
+            logger.info(f"Handout already exists for point: {point['id']}")
+            results.append({"point_id": point['id'], "status": "existing"})
+    
+    return results
 
 
 
