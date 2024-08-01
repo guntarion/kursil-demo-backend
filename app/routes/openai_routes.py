@@ -453,34 +453,45 @@ class TopicQuizRequest(BaseModel):
     topic_id: str
 
 @router.post("/generate-topic-quiz")
-async def generate_topic_quiz_route(request: TopicQuizRequest, background_tasks: BackgroundTasks):
+async def generate_topic_quiz_route(request: TopicQuizRequest):
     logger.debug(f"Received request to generate quiz for topic: {request.topic_id}")
     try:
-        points = get_points_discussion_ids_by_topic_id(request.topic_id)
+        points = await get_points_discussion_ids_by_topic_id(request.topic_id)
         if not points:
             raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
         
-        # Start the generation process in the background
-        background_tasks.add_task(process_topic_quiz, points)
+        results = await process_topic_quiz(points)
         
-        return {"message": f"Quiz generation started for {len(points)} points of discussion"}
+        return {"message": f"Quiz generation completed for {len(points)} points of discussion", "results": results}
     except Exception as e:
         logger.error(f"Error in topic quiz generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 async def process_topic_quiz(points):
+    results = []
     for point in points:
         try:
-            point_data = get_point_of_discussion(point['id'])
+            point_data = await get_point_of_discussion(point['id'])
+            if not point_data:
+                logger.warning(f"Point data not found for id: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed", "reason": "Point data not found"})
+                continue
+
             if not point_data.get('handout'):
                 logger.warning(f"Handout not found for point: {point['id']}. Skipping quiz generation.")
+                results.append({"point_id": point['id'], "status": "skipped", "reason": "Handout not found"})
                 continue
-            # quiz_content = generate_quiz(point_data['point_of_discussion'], point_data['handout'])
+
             quiz_content = await generate_quiz(point_data['point_of_discussion'], point_data['handout'], str(point_data['topic_name_id']))
-            if not quiz_content:
+            if quiz_content:
+                await update_quiz(point['id'], quiz_content)
+                logger.info(f"Generated and stored quiz for point of discussion: {point['id']}")
+                results.append({"point_id": point['id'], "status": "generated"})
+            else:
                 logger.warning(f"Generated quiz content is empty for point of discussion: {point['id']}")
-                continue
-            update_quiz(point['id'], quiz_content)
-            logger.info(f"Generated and stored quiz for point of discussion: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed", "reason": "Empty quiz content"})
         except Exception as e:
             logger.error(f"Error generating quiz for point {point['id']}: {str(e)}", exc_info=True)
+            results.append({"point_id": point['id'], "status": "failed", "reason": str(e)})
+    
+    return results

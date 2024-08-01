@@ -443,15 +443,11 @@ async def generate_quiz(point_of_discussion: str, handout: str, topic_id: str) -
         }
         await asyncio.to_thread(cost_ai_collection.insert_one, cost_data)
 
-        # Extract the quiz content
-        quiz_match = re.search(r'#### Kuis Pilihan Ganda\s*(.*)', response, re.DOTALL)
-        if quiz_match:
-            quiz_content = quiz_match.group(1).strip()
-            logger.debug(f"Extracted quiz content: {quiz_content}")
-            return quiz_content
-        else:
-            logger.warning("Quiz content not found in the response")
-            return ""
+        # Remove the '#### Kuis Pilihan Ganda' text if present
+        cleaned_response = response.replace('#### Kuis Pilihan Ganda', '').strip()
+        logger.debug(f"Cleaned quiz content: {cleaned_response}")
+
+        return cleaned_response
 
     except Exception as e:
         logger.error(f"Error generating quiz: {str(e)}")
