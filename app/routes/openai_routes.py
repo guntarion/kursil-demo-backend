@@ -144,6 +144,7 @@ class ElaborationRequest(BaseModel):
     objective: str
     points_of_discussion: List[str]
 
+# Oleh tombol elaborate
 @router.post("/elaborate-points")
 async def elaborate_points_of_discussion(request: ElaborationRequest):
     logger.debug("Received request for elaboration")
@@ -279,59 +280,51 @@ class TopicPromptingRequest(BaseModel):
     topic_id: str
 
 @router.post("/generate-topic-prompting")
-async def generate_topic_prompting_route(request: Request, topic_request: TopicPromptingRequest):
+async def generate_topic_prompting_route(topic_request: TopicPromptingRequest):
     logger.debug(f"Received request to generate prompting for topic: {topic_request.topic_id}")
     try:
         points = await get_points_discussion_ids_by_topic_id(topic_request.topic_id)
         if not points:
             raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
         
-        task_id = generate_task_id()
-        update_task_status(task_id, TaskStatus.PENDING)
+        results = await process_topic_prompting(points)
         
-        # Start the generation process in the background
-        asyncio.create_task(process_topic_prompting(points, task_id))
-        
-        return {"message": f"Prompting generation started for {len(points)} points of discussion", "task_id": task_id}
+        return {"message": f"Prompting generation completed for {len(points)} points of discussion", "results": results}
     except Exception as e:
         logger.error(f"Error in topic prompting generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-async def process_topic_prompting(points, task_id):
-    total_points = len(points)
-    try:
-        for i, point in enumerate(points, 1):
-            point_data = await get_point_of_discussion(point['id'])
-            if not point_data:
-                logger.warning(f"Point data not found for id: {point['id']}")
-                continue
-            
-            topic_id = await get_topic_id_by_point_id(point['id'])
-            if not topic_id:
-                logger.warning(f"Topic ID not found for point id: {point['id']}")
-                continue
-            
-            if not point_data.get('prompting'):
-                prompting = await generate_prompting(
-                    point_data['elaboration'],
-                    point_data['point_of_discussion'],
-                    topic_id
-                )
-                if prompting:
-                    await update_prompting(point['id'], prompting)
-                    logger.info(f"Generated prompting for point: {point['id']}")
-                else:
-                    logger.warning(f"No prompting generated for point: {point['id']}")
+async def process_topic_prompting(points):
+    results = []
+    for point in points:
+        point_data = await get_point_of_discussion(point['id'])
+        if not point_data:
+            logger.warning(f"Point data not found for id: {point['id']}")
+            continue
+        
+        topic_id = await get_topic_id_by_point_id(point['id'])
+        if not topic_id:
+            logger.warning(f"Topic ID not found for point id: {point['id']}")
+            continue
+        
+        if not point_data.get('prompting'):
+            prompting = await generate_prompting(
+                point_data['elaboration'],
+                point_data['point_of_discussion'],
+                topic_id
+            )
+            if prompting:
+                await update_prompting(point['id'], prompting)
+                logger.info(f"Generated prompting for point: {point['id']}")
+                results.append({"point_id": point['id'], "status": "generated"})
             else:
-                logger.info(f"Prompting already exists for point: {point['id']}")
-            
-            progress = (i / total_points) * 100
-            update_task_progress(task_id, progress, f"Processed point {i} of {total_points}")
-            
-        update_task_status(task_id, TaskStatus.COMPLETED)
-    except Exception as e:
-        logger.error(f"Error in prompting generation: {str(e)}", exc_info=True)
-        update_task_status(task_id, TaskStatus.FAILED)
+                logger.warning(f"No prompting generated for point: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed"})
+        else:
+            logger.info(f"Prompting already exists for point: {point['id']}")
+            results.append({"point_id": point['id'], "status": "existing"})
+    
+    return results
 
 
 class TopicHandoutRequest(BaseModel):
