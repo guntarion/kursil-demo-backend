@@ -4,7 +4,23 @@ from .database import main_topic_collection, list_topics_collection, points_disc
 from bson import ObjectId
 import logging
 
+# Configure the logger
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Create a console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# Create a formatter with a striking emoji
+formatter = logging.Formatter('⚡ %(asctime)s - %(levelname)s - %(message)s')
+
+# Add the formatter to the handler
+console_handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(console_handler)
+
 
 async def get_all_main_topics():
     cursor = main_topic_collection.find({}, {"main_topic": 1, "cost": 1})
@@ -141,7 +157,12 @@ async def get_points_discussion_ids_by_topic_id(topic_id):
         {"_id": 1, "point_of_discussion": 1}
     )
     points = await cursor.to_list(length=None)
-    return [{"id": str(point["_id"]), "point": point["point_of_discussion"]} for point in points]
+    result = [{"id": str(point["_id"]), "point": point["point_of_discussion"]} for point in points]
+
+    # Log the result with a striking emoji
+    logger.debug("⚡ Retrieved points discussion IDs: %s", result)
+
+    return result
 
 async def get_topic_id_by_point_id(point_id):
     point = await points_discussion_collection.find_one({"_id": ObjectId(point_id)})

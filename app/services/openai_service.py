@@ -335,12 +335,12 @@ async def generate_misc_points(point_of_discussion: str, handout: str, topic_id:
         return ""    
     
     prompt_template = read_prompt("./app/prompts/prompt_misc_points.txt")
-    my_prompt = prompt_template + f"The topic is {point_of_discussion} and here's the information: {handout}"
+    my_prompt = prompt_template + f"Topiknya {point_of_discussion} dan berikut adalah informasinya: {handout}"
 
     messages = [
         {
             "role": "system",
-            "content": "You are an educational content developer and are a consultant for PLN Pusdiklat (education and training centre) which supports Perusahaan Listrik Negara (PLN) in running the electricity business and other related fields. Provide response in bahasa Indonesia."
+            "content": "Anda adalah seorang pengembang konten edukasi dan merupakan konsultan untuk Pusdiklat PLN yang mendukung Perusahaan Listrik Negara (PLN) dalam menjalankan bisnis ketenagalistrikan dan bidang-bidang terkait lainnya. Anda harus memberikan jawaban dalam bahasa Indonesia."
         },
         {
             "role": "user",
@@ -358,7 +358,7 @@ async def generate_misc_points(point_of_discussion: str, handout: str, topic_id:
         )
 
         response = completion.choices[0].message.content.strip()
-        logger.debug(f"OpenAI response: {response}")
+        logger.debug(f"\n😊 ==!== OpenAI response: {response}")
 
         output_token_count = count_tokens(response)
         total_cost_idr = calculate_cost(input_token_count, output_token_count)
@@ -373,12 +373,20 @@ async def generate_misc_points(point_of_discussion: str, handout: str, topic_id:
         await asyncio.to_thread(cost_ai_collection.insert_one, cost_data)
 
         # Parse the response (existing code)
-        method = re.search(r'#### Usulan Durasi Waktu(.*?)(?=####|\Z)', response, re.DOTALL)
-        assessment = re.search(r'#### Identifikasi Kriteria Penilaian(.*?)(?=####|\Z)', response, re.DOTALL)
-        learn_objective = re.search(r'#### Tujuan Pembelajaran(.*?)(?=####|\Z)', response, re.DOTALL)
+        method = re.search(r'\[Usulan Durasi Waktu\]\n\n(.*?)(?=\*\*Durasi Total\*\*|\n###|\Z)', response, re.DOTALL)
+        assessment = re.search(r'\[Identifikasi Kriteria Penilaian\]\n\n(.*?)(?=\n###|\Z)', response, re.DOTALL)
+        learn_objective = re.search(r'\[Tujuan Pembelajaran\]\n\n(.*?)(?=\n###|\Z)', response, re.DOTALL)
 
         duration_match = re.search(r'\*\*Durasi Total\*\*:\s*(\d+)\s*menit', response)
-        duration = int(duration_match.group(1)) if duration_match else None
+        duration = int(duration_match.group(1))
+
+        logger.debug(f"\n\n==!!-- str(topic_id): {str(topic_id)}")
+        logger.debug(f"==!!-- point_of_discussion: {point_of_discussion}")
+        logger.debug(f"==!!-- method: {method.group(1).strip() if method else ''}")
+        logger.debug(f"==!!-- assessment: {assessment.group(1).strip() if assessment else ''}")
+        logger.debug(f"==!!-- learn_objective: {learn_objective.group(1).strip() if learn_objective else ''}")
+        logger.debug(f"==!!-- duration: {duration}\n\n")
+
 
         result = {
             "method": method.group(1).strip() if method else "",

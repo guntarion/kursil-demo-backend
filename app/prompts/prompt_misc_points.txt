@@ -1,28 +1,26 @@
-**— Prompt**
+Dengan menggunakan konten yang disediakan oleh pengguna, lakukan tugas-tugas berikut ini untuk membuat modul edukasi yang terstruktur:
 
-Using the content provided by the user, perform the following tasks to create a structured educational module:
+[Tujuan Pembelajaran]
+- Analisis konten dan saring tujuan pembelajaran utama. Sediakan narasi ringkas yang dengan jelas menguraikan apa yang harus diketahui atau dapat dilakukan siswa pada akhir sesi. Pastikan bahwa tujuan-tujuan tersebut bersifat spesifik, dapat diukur, dapat dicapai, relevan, dan terikat waktu (SMART).
 
-### 1. Identify Learning Objectives:
-- Analyze the content and distill the main learning objectives. Provide a concise narrative that clearly outlines what students should know or be able to do by the end of the session. Ensure that these objectives are specific, measurable, attainable, relevant, and time-bound (SMART).
+[Usulan Durasi Waktu]
+- Usulkan metodologi penyampaian yang tepat untuk konten dan waktu yang dibutuhkan untuk membahas materi secara memadai. Berikan durasi yang disarankan dalam menit untuk menyampaikan materi dalam metodologi yang disarankan, dengan mempertimbangkan kompleksitas konten dan kedalaman pengetahuan yang akan dibagikan. Cantumkan total waktu dalam menit.
 
-### 2. Propose Time Duration:
-- Propose the appropriate delivery methodology for the content and the time required to adequately cover the material. Provide a suggested duration in minutes for delivering the material in the suggested methodology, considering the complexity of the content and the depth of knowledge to be shared. Provide total times in minutes.
+[Identifikasi Kriteria Penilaian]
+- Kembangkan kriteria untuk menilai pemahaman dan penguasaan siswa terhadap topik. Kriteria ini harus selaras dengan tujuan pembelajaran dan dapat mencakup parameter seperti pemahaman konsep-konsep utama, kemampuan untuk menerapkan pengetahuan dalam situasi praktis, dan pemikiran kritis atau keterampilan pemecahan masalah yang ditunjukkan.
 
-### 3. Identify Assessment Criteria:
-- Develop criteria to assess students' understanding and mastery of the topic. These criteria should align with the learning objectives and might include parameters like comprehension of key concepts, ability to apply knowledge in practical settings, and critical thinking or problem-solving skills demonstrated.
+### Petunjuk Tambahan:
+- Pastikan bahwa semua komponen modul pendidikan koheren dan terorganisir secara logis.
+- Gunakan bahasa yang jelas dan tepat yang sesuai dengan tingkat pendidikan audiens yang dituju.
+- Pertimbangkan pendekatan pedagogis yang paling sesuai dengan penyampaian materi ini, seperti pengajaran langsung, pembelajaran kolaboratif, atau kegiatan berbasis inkuiri.
 
-### Additional Instructions:
-- Ensure that all components of the educational module are coherent and logically organized.
-- Use clear and precise language suitable for the educational level of the intended audience.
-- Consider the pedagogical approaches that might best suit the delivery of this content, such as direct instruction, collaborative learning, or inquiry-based activities.
+Modul pendidikan ini harus berfungsi sebagai sumber daya yang komprehensif bagi para pengajar untuk secara efektif mengajar dan menilai materi yang diberikan, meningkatkan pengalaman belajar siswa dan memastikan bahwa mereka memenuhi tujuan pembelajaran yang telah ditentukan.
 
-This educational module should serve as a comprehensive resource for trainers to effectively teach and assess the provided content, enhancing students' learning experience and ensuring they meet the specified learning objectives.
+Mohon berikan tanggapan Anda dalam BAHASA INDONESIA. Teks dalam markdown `### ` harus tepat seperti itu, karena akan digunakan untuk parsing.
 
-Please give response in BAHASA INDONESIA.
+### Contoh Tanggapan:
 
-### Example Response:
-
-#### Tujuan Pembelajaran
+[Tujuan Pembelajaran]
 
 1. Mendefinisikan manajemen bahan bakar dan menjelaskan ruang lingkupnya dalam sektor energi.
 2. Memahami dan mengartikulasikan pentingnya dan relevansi manajemen bahan bakar dalam efisiensi operasional, manajemen biaya, dan kelestarian lingkungan.
@@ -32,7 +30,7 @@ Please give response in BAHASA INDONESIA.
 6. Mendiskusikan tren dan inovasi masa depan dalam manajemen bahan bakar, termasuk bahan bakar terbarukan, teknologi penyimpanan canggih, dan digitalisasi.
 
 
-#### Usulan Durasi Waktu
+[Usulan Durasi Waktu]
 
 **Metodologi Pengiriman**: Kombinasi antara pengajaran langsung (ceramah), pembelajaran kolaboratif (diskusi kelompok), dan kegiatan berbasis inkuiri (analisis studi kasus).
 
@@ -49,11 +47,9 @@ Please give response in BAHASA INDONESIA.
 
 **Durasi Total**: 150
 
-#### Identifikasi Kriteria Penilaian
+[Identifikasi Kriteria Penilaian]
 
 1. **Pemahaman terhadap Konsep-konsep Utama**: Kemampuan untuk mendefinisikan dan menjelaskan manajemen bahan bakar dan elemen-elemen utamanya secara akurat.
 2. **Penerapan Pengetahuan**: Menunjukkan kemampuan untuk menerapkan prinsip-prinsip manajemen bahan bakar dalam skenario praktis yang relevan dengan PLN Persero.
 3. **Pemikiran Kritis**: Kemampuan untuk menganalisis dan mendiskusikan masalah-masalah yang berkaitan dengan manajemen bahan bakar: Kemampuan untuk menganalisis dan mendiskusikan contoh-contoh dunia nyata dan studi kasus, mengidentifikasi praktik-praktik terbaik dan area-area yang perlu ditingkatkan.
 4. **Kemampuan Pemecahan Masalah**: Kemampuan untuk mengusulkan solusi untuk tantangan manajemen bahan bakar dan mendiskusikan tren masa depan secara efektif.
-
-**— End of Prompt**

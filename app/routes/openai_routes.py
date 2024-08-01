@@ -405,34 +405,49 @@ class TopicMiscRequest(BaseModel):
     topic_id: str
 
 @router.post("/generate-topic-misc")
-async def generate_topic_misc_route(request: TopicMiscRequest, background_tasks: BackgroundTasks):
+async def generate_topic_misc_route(request: TopicMiscRequest):
     logger.debug(f"Received request to generate misc points for topic: {request.topic_id}")
     try:
-        points = get_points_discussion_ids_by_topic_id(request.topic_id)
+        points = await get_points_discussion_ids_by_topic_id(request.topic_id)
+        logger.debug(f"\n\n⚡️ ----------------------------→ Points retrieved: {points}\n\n")
         if not points:
             raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
         
-        # Start the generation process in the background
-        background_tasks.add_task(process_topic_misc, points)
+        results = await process_topic_misc(points)
         
-        return {"message": f"Misc points generation started for {len(points)} points of discussion"}
+        return {"message": f"Misc points generation completed for {len(points)} points of discussion", "results": results}
     except Exception as e:
         logger.error(f"Error in topic misc points generation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 async def process_topic_misc(points):
+    results = []
     for point in points:
         try:
-            point_data = get_point_of_discussion(point['id'])
+            point_data = await get_point_of_discussion(point['id'])
+            if not point_data:
+                logger.warning(f"Point data not found for id: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed", "reason": "Point data not found"})
+                continue
+
             if not point_data.get('handout'):
                 logger.warning(f"Handout not found for point: {point['id']}. Skipping misc points generation.")
+                results.append({"point_id": point['id'], "status": "skipped", "reason": "Handout not found"})
                 continue
-            # misc_points = generate_misc_points(point_data['point_of_discussion'], point_data['handout'])
+
             misc_points = await generate_misc_points(point_data['point_of_discussion'], point_data['handout'], str(point_data['topic_name_id']))
-            update_misc_points(point['id'], misc_points)
-            logger.info(f"Generated misc points for point of discussion: {point['id']}")
+            if misc_points:
+                await update_misc_points(point['id'], misc_points)
+                logger.info(f"Generated misc points for point of discussion: {point['id']}")
+                results.append({"point_id": point['id'], "status": "generated"})
+            else:
+                logger.warning(f"Failed to generate misc points for point: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed", "reason": "Misc points generation failed"})
         except Exception as e:
             logger.error(f"Error generating misc points for point {point['id']}: {str(e)}", exc_info=True)
+            results.append({"point_id": point['id'], "status": "failed", "reason": str(e)})
+    
+    return results
 
 class TopicQuizRequest(BaseModel):
     topic_id: str
