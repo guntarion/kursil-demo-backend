@@ -168,7 +168,7 @@ def translate_points(points: List[str]) -> List[str]:
 
 
 
-def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: List[str]) -> List[Dict[str, str]]:
+async def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: List[str]) -> List[Dict[str, str]]:
     prompt_template = read_prompt("./app/prompts/prompt_detaillistof_discussionpoint.txt")
 
     points_str = "\n".join([f"  - {point}" for point in points_of_discussion])
@@ -225,17 +225,17 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
         })
 
     # Store elaborated points in the database and get the topic_id
-    topic_doc = get_topic_by_name(topic)
+    topic_doc = await get_topic_by_name(topic)
     topic_id = None
     if topic_doc:
         topic_id = topic_doc['_id']
         for point in elaborated_points:
-            add_elaborated_point(point['subtopic'], point['elaboration'], topic_id)
+            await add_elaborated_point(point['subtopic'], point['elaboration'], topic_id)
 
     # Store cost information in cost_ai_collection
     cost_data = {
         "datetime": datetime.utcnow(),
-        "topic_id": topic_id,  
+        "topic_id": str(topic_id),
         "content": topic,
         "process_name": "elaboration",
         "cost": round(total_cost_idr)  
@@ -246,7 +246,7 @@ def elaborate_discussionpoint(topic: str, objective: str, points_of_discussion: 
 
 
 # 🔰 Individual functions to generate prompting
-async def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
+async def generate_prompting(elaboration: str, point_of_discussion: str, topic_id: str) -> str:
     prompt_template = read_prompt("./app/prompts/prompt_create_prompttowrite.txt")
     
     prompt = prompt_template.replace("{point_of_discussion}", point_of_discussion)
@@ -257,6 +257,9 @@ async def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
         {"role": "user", "content": prompt}
     ]
 
+    # Calculate input tokens
+    input_token_count = count_tokens(prompt)
+
     # Use asyncio.to_thread to run the synchronous OpenAI call in a separate thread
     completion = await asyncio.to_thread(
         client.chat.completions.create,
@@ -264,9 +267,31 @@ async def generate_prompting(elaboration: str, point_of_discussion: str) -> str:
         messages=messages
     )
 
-    return completion.choices[0].message.content.strip()
+    prompting_content = completion.choices[0].message.content.strip()
 
-def generate_handout(point_of_discussion: str, prompting: str) -> str:
+    # Calculate output tokens
+    output_token_count = count_tokens(prompting_content)
+
+    # Calculate cost
+    total_cost_idr = calculate_cost(input_token_count, output_token_count)
+
+    # Store cost information in cost_ai_collection
+    cost_data = {
+        "datetime": datetime.utcnow(),
+        "topic_id": str(topic_id),
+        "content": point_of_discussion,
+        "process_name": "prompting",
+        "cost": round(total_cost_idr)
+    }
+    await asyncio.to_thread(cost_ai_collection.insert_one, cost_data)
+
+    return prompting_content
+
+async def generate_handout(point_of_discussion: str, prompting: str, topic_id: str) -> str:
+    if not prompting:
+        logger.warning(f"Prompting is empty for point of discussion: {point_of_discussion}")
+        return ""
+    
     myprompt = f"The topic is {point_of_discussion} and here's the detail instruction: {prompting}"
 
     messages = [
@@ -280,14 +305,35 @@ def generate_handout(point_of_discussion: str, prompting: str) -> str:
         }
     ]
 
-    completion = client.chat.completions.create(
+    input_token_count = count_tokens(myprompt)
+
+    completion = await asyncio.to_thread(
+        client.chat.completions.create,
         model="gpt-4o-mini",
         messages=messages
     )
 
-    return completion.choices[0].message.content.strip()
+    handout_content = completion.choices[0].message.content.strip()
 
-def generate_misc_points(point_of_discussion: str, handout: str) -> dict:
+    output_token_count = count_tokens(handout_content)
+    total_cost_idr = calculate_cost(input_token_count, output_token_count)
+
+    cost_data = {
+        "datetime": datetime.utcnow(),
+        "topic_id": str(topic_id),
+        "content": point_of_discussion,
+        "process_name": "handout",
+        "cost": round(total_cost_idr)
+    }
+    await asyncio.to_thread(cost_ai_collection.insert_one, cost_data)
+
+    return handout_content
+
+async def generate_misc_points(point_of_discussion: str, handout: str, topic_id: str) -> dict:
+    if not handout:
+        logger.warning(f"Handout is empty for point of discussion: {point_of_discussion}")
+        return ""    
+    
     prompt_template = read_prompt("./app/prompts/prompt_misc_points.txt")
     my_prompt = prompt_template + f"The topic is {point_of_discussion} and here's the information: {handout}"
 
@@ -303,7 +349,10 @@ def generate_misc_points(point_of_discussion: str, handout: str) -> dict:
     ]
 
     try:
-        completion = client.chat.completions.create(
+        input_token_count = count_tokens(my_prompt)
+
+        completion = await asyncio.to_thread(
+            client.chat.completions.create,
             model="gpt-4o-mini",
             messages=messages
         )
@@ -311,17 +360,25 @@ def generate_misc_points(point_of_discussion: str, handout: str) -> dict:
         response = completion.choices[0].message.content.strip()
         logger.debug(f"OpenAI response: {response}")
 
+        output_token_count = count_tokens(response)
+        total_cost_idr = calculate_cost(input_token_count, output_token_count)
 
-        # Parse the response
+        cost_data = {
+            "datetime": datetime.utcnow(),
+            "topic_id": str(topic_id),
+            "content": point_of_discussion,
+            "process_name": "misc_points",
+            "cost": round(total_cost_idr)
+        }
+        await asyncio.to_thread(cost_ai_collection.insert_one, cost_data)
+
+        # Parse the response (existing code)
         method = re.search(r'#### Usulan Durasi Waktu(.*?)(?=####|\Z)', response, re.DOTALL)
         assessment = re.search(r'#### Identifikasi Kriteria Penilaian(.*?)(?=####|\Z)', response, re.DOTALL)
         learn_objective = re.search(r'#### Tujuan Pembelajaran(.*?)(?=####|\Z)', response, re.DOTALL)
 
-        # Parse total duration
         duration_match = re.search(r'\*\*Durasi Total\*\*:\s*(\d+)\s*menit', response)
         duration = int(duration_match.group(1)) if duration_match else None
-
-        logger.debug(f"🔰 Duration: {duration}")
 
         result = {
             "method": method.group(1).strip() if method else "",
@@ -329,18 +386,17 @@ def generate_misc_points(point_of_discussion: str, handout: str) -> dict:
             "learn_objective": learn_objective.group(1).strip() if learn_objective else "",
             "duration": duration
         }
-        logger.debug(f"🔰 Method: {result['method']}")
-        logger.debug(f"🔰 Assessment: {result['assessment']}")
-        logger.debug(f"🔰 Learn Objective: {result['learn_objective']}")
-        logger.debug(f"🔰 Duration: {duration}")
 
-        logger.debug(f"Parsed result: {result}")
         return result
     except Exception as e:
         logger.error(f"Error generating misc points: {str(e)}")
         raise
 
-def generate_quiz(point_of_discussion: str, handout: str) -> str:
+async def generate_quiz(point_of_discussion: str, handout: str, topic_id: str) -> str:
+    if not handout:
+        logger.warning(f"Handout is empty for point of discussion: {point_of_discussion}")
+        return ""        
+    
     prompt_template = read_prompt("./app/prompts/prompt_quiz.txt")
     my_prompt = prompt_template + f"The topic is {point_of_discussion} and here's the information: {handout}"
 
@@ -356,13 +412,28 @@ def generate_quiz(point_of_discussion: str, handout: str) -> str:
     ]
 
     try:
-        completion = client.chat.completions.create(
+        input_token_count = count_tokens(my_prompt)
+
+        completion = await asyncio.to_thread(
+            client.chat.completions.create,
             model="gpt-4o-mini",
             messages=messages
         )
 
         response = completion.choices[0].message.content.strip()
         logger.debug(f"OpenAI response for quiz: {response}")
+
+        output_token_count = count_tokens(response)
+        total_cost_idr = calculate_cost(input_token_count, output_token_count)
+
+        cost_data = {
+            "datetime": datetime.utcnow(),
+            "topic_id": str(topic_id),
+            "content": point_of_discussion,
+            "process_name": "quiz",
+            "cost": round(total_cost_idr)
+        }
+        await asyncio.to_thread(cost_ai_collection.insert_one, cost_data)
 
         # Extract the quiz content
         quiz_match = re.search(r'#### Kuis Pilihan Ganda\s*(.*)', response, re.DOTALL)
