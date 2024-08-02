@@ -9,8 +9,8 @@ from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id,  get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id,  get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id, update_translated_handout
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -435,6 +435,53 @@ async def process_topic_quiz(points):
                 results.append({"point_id": point['id'], "status": "failed", "reason": "Empty quiz content"})
         except Exception as e:
             logger.error(f"Error generating quiz for point {point['id']}: {str(e)}", exc_info=True)
+            results.append({"point_id": point['id'], "status": "failed", "reason": str(e)})
+    
+    return results
+
+class TranslateHandoutRequest(BaseModel):
+    topic_id: str
+
+@router.post("/translate-handout")
+async def translate_handout_route(request: TranslateHandoutRequest):
+    logger.debug(f"Received request to translate handout for topic: {request.topic_id}")
+    try:
+        points = await get_points_discussion_ids_by_topic_id(request.topic_id)
+        if not points:
+            raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
+        
+        results = await process_handout_translation(points)
+        
+        return {"message": f"Handout translation completed for {len(points)} points of discussion", "results": results}
+    except Exception as e:
+        logger.error(f"Error in handout translation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_handout_translation(points):
+    results = []
+    for point in points:
+        try:
+            point_data = await get_point_of_discussion(point['id'])
+            if not point_data:
+                logger.warning(f"Point data not found for id: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed", "reason": "Point data not found"})
+                continue
+
+            if not point_data.get('handout'):
+                logger.warning(f"Handout not found for point: {point['id']}. Skipping translation.")
+                results.append({"point_id": point['id'], "status": "skipped", "reason": "Handout not found"})
+                continue
+
+            translated_handout = generate_handout_translation(point_data['handout'])
+            if translated_handout:
+                await update_translated_handout(point['id'], translated_handout)
+                logger.info(f"Generated and stored translated handout for point of discussion: {point['id']}")
+                results.append({"point_id": point['id'], "status": "translated"})
+            else:
+                logger.warning(f"Generated translated handout is empty for point of discussion: {point['id']}")
+                results.append({"point_id": point['id'], "status": "failed", "reason": "Empty translated handout"})
+        except Exception as e:
+            logger.error(f"Error translating handout for point {point['id']}: {str(e)}", exc_info=True)
             results.append({"point_id": point['id'], "status": "failed", "reason": str(e)})
     
     return results

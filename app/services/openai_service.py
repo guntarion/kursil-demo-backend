@@ -11,6 +11,7 @@ from app.services.cost_calculator import calculate_cost
 from app.db.database import main_topic_collection, list_topics_collection, cost_ai_collection
 from app.db.operations import get_topic_by_name, add_elaborated_point, add_elaborated_point, get_topic_by_name
 from datetime import datetime
+from deep_translator import GoogleTranslator
 
 import logging
 
@@ -452,3 +453,19 @@ async def generate_quiz(point_of_discussion: str, handout: str, topic_id: str) -
     except Exception as e:
         logger.error(f"Error generating quiz: {str(e)}")
         raise
+
+def generate_handout_translation(handout: str) -> str:
+    try:
+        translator = GoogleTranslator(source='en', target='id')
+        # Translate in chunks of 5000 characters to avoid length limits
+        chunks = [handout[i:i+3000] for i in range(0, len(handout), 3000)]
+        translated_chunks = [translator.translate(chunk) for chunk in chunks]
+
+        # Join the translated chunks back into a single string
+        translated_handout = ' '.join(translated_chunks)
+
+        logger.debug(f"Translated handout: {translated_handout}")
+        return translated_handout
+    except Exception as e:
+        logger.error(f"Error translating handout: {str(e)}")
+        raise    

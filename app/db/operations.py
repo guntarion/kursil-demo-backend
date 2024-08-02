@@ -178,3 +178,24 @@ async def get_total_cost_by_topic(topic_id: str):
     result = await cost_ai_collection.aggregate(pipeline).to_list(length=1)
     return result[0]["total_cost"] if result else 0
 
+async def update_translated_handout(point_id: str, translated_handout: str):
+    logger.info(f"Updating translated handout for point of discussion: {point_id}")
+    try:
+        result = await points_discussion_collection.update_one(
+            {"_id": ObjectId(point_id)},
+            {"$set": {"handout_id": translated_handout}}
+        )
+
+        logger.info(f"Update result: matched {result.matched_count}, modified {result.modified_count}")
+
+        if result.matched_count == 0:
+            logger.warning(f"No document found for point of discussion: {point_id}")
+        elif result.modified_count == 0:
+            logger.warning(f"Document found but not modified for point of discussion: {point_id}")
+        else:
+            logger.info(f"Successfully updated translated handout for point of discussion: {point_id}")
+
+        return result.modified_count
+    except Exception as e:
+        logger.error(f"Error updating translated handout for point of discussion {point_id}: {str(e)}", exc_info=True)
+        raise
