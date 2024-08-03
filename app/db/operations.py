@@ -199,3 +199,21 @@ async def update_translated_handout(point_id: str, translated_handout: str):
     except Exception as e:
         logger.error(f"Error updating translated handout for point of discussion {point_id}: {str(e)}", exc_info=True)
         raise
+
+async def update_main_topic_document(main_topic_id: str, update_data: dict):
+    try:
+        result = await main_topic_collection.update_one(
+            {"_id": ObjectId(main_topic_id)},
+            {"$set": update_data}
+        )
+        return result.modified_count > 0
+    except Exception as e:
+        logger.error(f"Error updating main topic document: {str(e)}")
+        return False
+
+async def get_main_topic_by_id(main_topic_id: str):
+    try:
+        return await main_topic_collection.find_one({"_id": ObjectId(main_topic_id)})
+    except Exception as e:
+        logger.error(f"Error getting main topic by ID: {str(e)}")
+        return None    

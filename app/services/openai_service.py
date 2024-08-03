@@ -132,7 +132,9 @@ def create_listof_topic(topic):
         "main_topic": topic,
         "cost": total_cost_idr,
         "list_of_topics": [t["topic_name"] for t in parsed_topics],
-        "main_topic_objective": summary
+        "main_topic_objective": summary,
+        "latest_kursil_document": str,  # Path to the latest generated Kursil document
+        "latest_handout_document": str  # Path to the latest generated Handout document
     }
     result = main_topic_collection.insert_one(main_topic_data)
     main_topic_id = str(result.inserted_id)
