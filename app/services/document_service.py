@@ -362,7 +362,7 @@ async def generate_powerpoint_document(main_topic: str, powerpoint_data: list):
     # prs.slide_height = Inches(9)
 
     # Load the custom template
-    template_path = os.path.join('./documents', 'template_plnnp.pptx')
+    template_path = os.path.join('./app/res/', 'template_plnnp.pptx')
     prs = Presentation(template_path)
 
     # Title slide (assuming it's the first layout in your template)
