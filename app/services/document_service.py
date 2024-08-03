@@ -9,9 +9,11 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from markdown import markdown
 from bs4 import BeautifulSoup
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.enum.text import PP_ALIGN
+import re
 from datetime import datetime
-from itertools import groupby
-from operator import itemgetter
 from ..db.operations import main_topic_collection, list_topics_collection, points_discussion_collection
 
 logger = logging.getLogger(__name__)
@@ -318,3 +320,130 @@ async def generate_kursil_word_document(main_topic: str, kursil_data: list):
     doc.save(document_path)
     logger.info(f"Document saved at: {document_path}")
     return document_path
+
+async def get_powerpoint_data_by_main_topic_id(main_topic_id: str):
+    # Get the main topic document
+    main_topic = await main_topic_collection.find_one({"_id": ObjectId(main_topic_id)})
+    if not main_topic:
+        return None, []
+
+    powerpoint_data = []
+
+    # Iterate through list_of_topics
+    for topic_name in main_topic['list_of_topics']:
+        # Find the corresponding document in list_topics_collection
+        list_topic = await list_topics_collection.find_one({"topic_name": topic_name})
+        if not list_topic:
+            continue
+
+        # Get all points_discussion documents for this topic
+        points_discussion_cursor = points_discussion_collection.find({
+            "topic_name_id": list_topic['_id']
+        })
+        points_discussion_docs = await points_discussion_cursor.to_list(length=None)
+
+        # Collect non-empty elaborations
+        for point in points_discussion_docs:
+            if point.get('elaboration'):
+                powerpoint_data.append({
+                    'topic_name': topic_name,
+                    'point_of_discussion': point['point_of_discussion'],
+                    'elaboration': point['elaboration']
+                })
+
+    return main_topic['main_topic'], powerpoint_data
+
+
+
+async def generate_powerpoint_document(main_topic: str, powerpoint_data: list):
+    # Create a presentation with 16:9 aspect ratio
+    # prs = Presentation()
+    # prs.slide_width = Inches(16)
+    # prs.slide_height = Inches(9)
+
+    # Load the custom template
+    template_path = os.path.join('./documents', 'template_plnnp.pptx')
+    prs = Presentation(template_path)
+
+    # Title slide (assuming it's the first layout in your template)
+    title_slide_layout = prs.slide_layouts[0]
+    slide = prs.slides.add_slide(title_slide_layout)
+    
+    # Adjust these lines based on your template's placeholder indices
+    title = slide.shapes.title
+    subtitle = slide.placeholders[1]
+    
+    title.text = main_topic
+    if subtitle:
+        subtitle.text = f"Generated on {datetime.now().strftime('%Y-%m-%d')}"
+
+    for data in powerpoint_data:
+        # Section header slide for point_of_discussion
+        section_slide_layout = prs.slide_layouts[2]  # Assuming layout 2 is "Section Header"
+        slide = prs.slides.add_slide(section_slide_layout)
+        title = slide.shapes.title
+        title.text = data['point_of_discussion']
+
+        # Parse the elaboration content
+        content_lines = data['elaboration'].split('\n')
+        current_title = ""
+        current_content = []
+
+        for line in content_lines:
+            if line.startswith('- **') and line.endswith('**'):
+                # If we have a previous title and content, create a slide for it
+                if current_title and current_content:
+                    create_content_slide(prs, current_title, current_content)
+                
+                # Start a new title and reset content
+                current_title = line.strip('- **')
+                current_title = current_title.strip(':')
+                current_content = []
+            elif line.strip():
+                body_content = line.strip('- ')
+                current_content.append(body_content)
+
+        # Create the last slide if there's remaining content
+        if current_title and current_content:
+            create_content_slide(prs, current_title, current_content)
+
+    # Generate filename
+    date_str = datetime.now().strftime("%y-%m-%d")
+    sanitized_topic = sanitize_filename(main_topic)
+    base_filename = f"{sanitized_topic} - {date_str} - presentation"
+
+    # Ensure the documents directory exists
+    os.makedirs('./documents', exist_ok=True)
+
+    # Check for existing files and append number if necessary
+    index = 0
+    while True:
+        if index == 0:
+            filename = f"{base_filename}.pptx"
+        else:
+            filename = f"{base_filename} ({index}).pptx"
+
+        document_path = os.path.join('./documents', filename)
+        if not os.path.exists(document_path):
+            break
+        index += 1
+
+    prs.save(document_path)
+    return document_path
+
+def create_content_slide(prs, title, content):
+    content_slide_layout = prs.slide_layouts[1]  # Assuming layout 1 is "Title and Content"
+    slide = prs.slides.add_slide(content_slide_layout)
+    shapes = slide.shapes
+
+    title_shape = shapes.title
+    title_shape.text = title
+
+    body_shape = shapes.placeholders[1]
+    tf = body_shape.text_frame
+    tf.text = ""
+
+    for point in content:
+        p = tf.add_paragraph()
+        p.text = point
+        p.level = 0

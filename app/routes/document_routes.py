@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from bson import ObjectId
-from ..services.document_service import get_all_handouts_by_main_topic_id, generate_handout_word_document, get_all_kursil_by_main_topic_id, generate_kursil_word_document
+from ..services.document_service import get_all_handouts_by_main_topic_id, generate_handout_word_document, get_all_kursil_by_main_topic_id, generate_kursil_word_document, get_powerpoint_data_by_main_topic_id, generate_powerpoint_document
 from ..db.operations import update_main_topic_document, get_main_topic_by_id
 
 import os
@@ -68,6 +68,8 @@ async def download_document(main_topic_id: str, document_type: str):
         document_path = main_topic.get("latest_kursil_document")
     elif document_type == "handout":
         document_path = main_topic.get("latest_handout_document")
+    elif document_type == "presentation": 
+        document_path = main_topic.get("latest_powerpoint_document")
     else:
         raise HTTPException(status_code=400, detail="Invalid document type")
     
@@ -77,4 +79,25 @@ async def download_document(main_topic_id: str, document_type: str):
     if not os.path.exists(document_path):
         raise HTTPException(status_code=404, detail="Document file not found")
     
-    return FileResponse(document_path, filename=os.path.basename(document_path))  
+    return FileResponse(document_path, filename=os.path.basename(document_path))
+
+class MainTopicRequest(BaseModel):
+    main_topic_id: str
+
+@router.post("/generate-powerpoint-document")
+async def generate_powerpoint_document_route(request: MainTopicRequest):
+    try:
+        main_topic, powerpoint_data = await get_powerpoint_data_by_main_topic_id(request.main_topic_id)
+        if not main_topic or not powerpoint_data:
+            raise HTTPException(status_code=404, detail="No data found for the given main topic")
+        
+        document_path = await generate_powerpoint_document(main_topic, powerpoint_data)
+        
+        # Update the main_topic_collection with the new document path
+        updated = await update_main_topic_document(request.main_topic_id, {"latest_powerpoint_document": document_path})
+        if not updated:
+            raise HTTPException(status_code=500, detail="Failed to update main topic with new document path")
+        
+        return {"message": "PowerPoint document generated successfully", "document_path": document_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
