@@ -3,6 +3,7 @@ import asyncio
 from bson import ObjectId
 import os
 import re
+from fastapi import HTTPException
 from openai import OpenAI
 from typing import List, Dict
 from dotenv import load_dotenv
@@ -11,8 +12,9 @@ from app.services.cost_calculator import calculate_cost
 from app.db.database import main_topic_collection, list_topics_collection, cost_ai_collection
 from app.db.operations import get_topic_by_name, add_elaborated_point, add_elaborated_point, get_topic_by_name
 from datetime import datetime
+import base64
 from deep_translator import GoogleTranslator
-
+import requests
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -471,3 +473,47 @@ def generate_handout_translation(handout: str) -> str:
     except Exception as e:
         logger.error(f"Error translating handout: {str(e)}")
         raise    
+
+
+def generate_topic_imageicon(topic: str) -> str:
+    prompt = f"Create a color minimalist icon-like image depicting the information of the training topic: {topic}. The image should be simple, professional, and easily recognizable. There should not be any text on the image."
+
+    try:
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+
+        logger.debug(f"OpenAI API response: {response}")
+
+        if not response.data:
+            raise ValueError("No image data in the response")
+
+        image_url = response.data[0].url
+
+        if not image_url:
+            raise ValueError("No image URL in the response")
+
+        # Download the image from the URL
+        image_response = requests.get(image_url)
+        image_response.raise_for_status()  # Raise an exception for bad status codes
+
+        # Create the resources directory if it doesn't exist
+        os.makedirs("./resources", exist_ok=True)
+
+        # Generate filename with datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"./resources/icon_{timestamp}.png"
+
+        # Save the image
+        with open(filename, "wb") as f:
+            f.write(image_response.content)
+
+        return filename
+    except Exception as e:
+        logger.error(f"Error generating image: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Error generating image: {str(e)}")

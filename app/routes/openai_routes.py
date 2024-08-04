@@ -9,9 +9,8 @@ from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation, generate_topic_imageicon
 from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id,  get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id, update_translated_handout
-from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -485,3 +484,16 @@ async def process_handout_translation(points):
             results.append({"point_id": point['id'], "status": "failed", "reason": str(e)})
     
     return results
+
+
+class TopicRequest(BaseModel):
+    topic: str
+
+
+@router.post("/generate-image")
+async def generate_image_route(request: TopicRequest):
+    try:
+        image_path = generate_topic_imageicon(request.topic)
+        return {"message": "Image generated successfully", "image_path": image_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

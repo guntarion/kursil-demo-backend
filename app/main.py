@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.openai_routes import router as openai_router
 from app.routes.document_routes import router as document_routes
 from app.routes.rag_routes import router as rag_routes
+from app.routes.multimedia_routes import router as multimedia_routes
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(openai_router, prefix="/api", tags=["openai"])
 app.include_router(document_routes, prefix="/api", tags=["documents"])
 app.include_router(rag_routes, prefix="/rag", tags=["RAG"])
+app.include_router(multimedia_routes, prefix="/api", tags=["multimedia"])
 
 @app.get("/")
 async def read_root():
