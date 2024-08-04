@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 import tiktoken
 from app.services.cost_calculator import calculate_cost
 from app.db.database import main_topic_collection, list_topics_collection, cost_ai_collection
-from app.db.operations import get_topic_by_name, add_elaborated_point, add_elaborated_point, get_topic_by_name
+from app.db.operations import get_topic_by_name, add_elaborated_point, add_elaborated_point, get_topic_by_name, update_main_topic_document
+from app.utils.digitalocean_spaces import upload_file_to_spaces
 from datetime import datetime
 import base64
 from deep_translator import GoogleTranslator
@@ -136,7 +137,10 @@ def create_listof_topic(topic):
         "list_of_topics": [t["topic_name"] for t in parsed_topics],
         "main_topic_objective": summary,
         "latest_kursil_document": str,  # Path to the latest generated Kursil document
-        "latest_handout_document": str  # Path to the latest generated Handout document
+        "latest_handout_document": str,  # Path to the latest generated Handout document
+        "latest_powerpoint_document": str,  # Path to the latest generated Powerpoint document
+        "link_image_icon": str, 
+        "link_audio_pitch": str 
     }
     result = main_topic_collection.insert_one(main_topic_data)
     main_topic_id = str(result.inserted_id)
@@ -475,7 +479,7 @@ def generate_handout_translation(handout: str) -> str:
         raise    
 
 
-def generate_topic_imageicon(topic: str) -> str:
+async def generate_topic_imageicon(topic: str, main_topic_id: str) -> str:
     prompt = f"Create a color minimalist icon-like image depicting the information of the training topic: {topic}. The image should be simple, professional, and easily recognizable. There should not be any text on the image."
 
     try:
@@ -512,7 +516,19 @@ def generate_topic_imageicon(topic: str) -> str:
         with open(filename, "wb") as f:
             f.write(image_response.content)
 
-        return filename
+        # Upload the image to DigitalOcean Spaces
+        file_url = upload_file_to_spaces(filename)
+
+        if file_url:
+            # Update the main_topic_collection with the new image URL
+            updated = await update_main_topic_document(main_topic_id, {"link_image_icon": file_url})
+            if not updated:
+                raise ValueError("Failed to update main topic with new image URL")
+
+        # Clean up the local file
+        os.remove(filename)
+
+        return file_url    
     except Exception as e:
         logger.error(f"Error generating image: {str(e)}", exc_info=True)
         raise HTTPException(

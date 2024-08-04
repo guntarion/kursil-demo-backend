@@ -15,6 +15,7 @@ from pptx.enum.text import PP_ALIGN
 import re
 from datetime import datetime
 from ..db.operations import main_topic_collection, list_topics_collection, points_discussion_collection
+from app.utils.digitalocean_spaces import upload_file_to_spaces
 
 logger = logging.getLogger(__name__)
 
@@ -102,28 +103,22 @@ async def generate_handout_word_document(main_topic: str, handouts: list):
         doc.add_page_break()
 
     # Generate filename
-    date_str = datetime.now().strftime("%y-%m-%d")
+    date_str = datetime.now().strftime("%y-%m-%d_%H-%M")
     sanitized_topic = sanitize_filename(main_topic)
-    base_filename = f"{sanitized_topic} - {date_str} - handout"
+    filename = f"{sanitized_topic} - {date_str} - handout.docx"
 
     # Ensure the documents directory exists
     os.makedirs('./documents', exist_ok=True)
 
-    # Check for existing files and append number if necessary
-    index = 0
-    while True:
-        if index == 0:
-            filename = f"{base_filename}.docx"
-        else:
-            filename = f"{base_filename} ({index}).docx"
-
-        document_path = os.path.join('./documents', filename)
-        if not os.path.exists(document_path):
-            break
-        index += 1
-
+    document_path = os.path.join('./documents', filename)
     doc.save(document_path)
-    return document_path
+    # Upload to DigitalOcean Spaces
+    file_url = upload_file_to_spaces(document_path, folder="kursil/documents")
+
+    # Clean up local file
+    os.remove(document_path)
+
+    return file_url
 
 
 
@@ -297,29 +292,23 @@ async def generate_kursil_word_document(main_topic: str, kursil_data: list):
         doc.add_page_break()
 
     # Generate filename
-    date_str = datetime.now().strftime("%y-%m-%d")
+    date_str = datetime.now().strftime("%y-%m-%d_%H-%M")
     sanitized_topic = sanitize_filename(main_topic)
-    base_filename = f"{sanitized_topic} - {date_str} - kursil"
+    filename = f"{sanitized_topic} - {date_str} - kursil.docx"
 
     # Ensure the documents directory exists
     os.makedirs('./documents', exist_ok=True)
 
-    # Check for existing files and append number if necessary
-    index = 0
-    while True:
-        if index == 0:
-            filename = f"{base_filename}.docx"
-        else:
-            filename = f"{base_filename} ({index}).docx"
-
-        document_path = os.path.join('./documents', filename)
-        if not os.path.exists(document_path):
-            break
-        index += 1
-
+    document_path = os.path.join('./documents', filename)
     doc.save(document_path)
-    logger.info(f"Document saved at: {document_path}")
-    return document_path
+    # Upload to DigitalOcean Spaces
+    file_url = upload_file_to_spaces(document_path, folder="kursil/documents")
+
+    # Clean up local file
+    os.remove(document_path)
+    logger.info(f"Document saved at: {file_url}")
+
+    return file_url
 
 async def get_powerpoint_data_by_main_topic_id(main_topic_id: str):
     # Get the main topic document
@@ -408,28 +397,22 @@ async def generate_powerpoint_document(main_topic: str, powerpoint_data: list):
             create_content_slide(prs, current_title, current_content)
 
     # Generate filename
-    date_str = datetime.now().strftime("%y-%m-%d")
+    date_str = datetime.now().strftime("%y-%m-%d_%H-%M")
     sanitized_topic = sanitize_filename(main_topic)
-    base_filename = f"{sanitized_topic} - {date_str} - presentation"
+    filename = f"{sanitized_topic} - {date_str} - presentasi.pptx"
 
     # Ensure the documents directory exists
     os.makedirs('./documents', exist_ok=True)
 
-    # Check for existing files and append number if necessary
-    index = 0
-    while True:
-        if index == 0:
-            filename = f"{base_filename}.pptx"
-        else:
-            filename = f"{base_filename} ({index}).pptx"
-
-        document_path = os.path.join('./documents', filename)
-        if not os.path.exists(document_path):
-            break
-        index += 1
-
+    document_path = os.path.join('./documents', filename)
     prs.save(document_path)
-    return document_path
+    # Upload to DigitalOcean Spaces
+    file_url = upload_file_to_spaces(document_path, folder="kursil/documents")
+
+    # Clean up local file
+    os.remove(document_path)
+
+    return file_url
 
 def create_content_slide(prs, title, content):
     content_slide_layout = prs.slide_layouts[1]  # Assuming layout 1 is "Title and Content"

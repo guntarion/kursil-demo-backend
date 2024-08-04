@@ -490,10 +490,14 @@ class TopicRequest(BaseModel):
     topic: str
 
 
+class TopicImageRequest(BaseModel):
+    topic: str
+    main_topic_id: str
+
 @router.post("/generate-image")
-async def generate_image_route(request: TopicRequest):
+async def generate_image_route(request: TopicImageRequest):
     try:
-        image_path = generate_topic_imageicon(request.topic)
-        return {"message": "Image generated successfully", "image_path": image_path}
+        image_url = await generate_topic_imageicon(request.topic, request.main_topic_id)
+        return {"message": "Image generated and uploaded successfully", "image_url": image_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
