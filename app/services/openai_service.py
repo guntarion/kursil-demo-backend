@@ -70,6 +70,22 @@ def parse_generated_content(content):
 
     return parsed_topics
 
+
+def generate_analogy(points_of_discussion):
+
+    messages = [
+        {"role": "system", "content": "Anda adalah seorang pengembang konten pendidikan dan merupakan konsultan untuk Pusdiklat PLN (pusat pendidikan dan pelatihan) yang mendukung Perusahaan Listrik Negara (PLN) dalam menjalankan bisnis ketenagalistrikan dan bidang-bidang lain yang terkait. Dari informasi yang diberikan user, carilah dan pilihlah konsep yang paling sulit, lalu buatkan analogi yang dapat menyederhanakan atau menjelaskan konsep tersebut dengan cara yang lebih mudah dipahami dan menarik. 1. Analogi ini ditujukan bagi audiens para karyawan Perusahaan Listrik Negara;  buat asumsi terkait latar belakang, tingkatan pengetahuan, dan minat audiens ini. 2. Carilah Koneksi yang Familiar. Cari objek, situasi, atau pengalaman yang familiar bagi audiens sebagai dasar analogi.  3. Analisis Kesamaan. Temukan kesamaan fungsional atau konseptual antara konsep utama dan objek analogi yang Anda pilih. Pastikan kesamaan tersebut cukup kuat untuk mendukung pemahaman tentang konsep utama. 4. Kembangkan Analogi. Bangun analogi Anda dengan menghubungkan kesamaan yang telah diidentifikasi. Gunakan narasi atau deskripsi yang jelas untuk menjelaskan bagaimana objek analogi merepresentasikan konsep utama."},
+        {"role": "user", "content": points_of_discussion}
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages
+    )
+
+    analogy = completion.choices[0].message.content.strip()
+    return analogy
+
 def generate_summary(parsed_topics):
     prompt = "Generate a concise and coherent summary of the learning objectives based on the following information about several learning topics. This summary will be included in a curriculum document to offer a general overview of what participants will achieve through the training program. The summary should integrate the objectives from each topic to highlight the program's overall educational goals, ensuring clarity and alignment with the intended learning outcomes. Provide only the summary and nothing else.\n\n"
 

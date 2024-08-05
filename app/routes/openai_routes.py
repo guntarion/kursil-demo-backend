@@ -9,8 +9,8 @@ from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation, generate_topic_imageicon
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_elaborated_points_by_topic_id, get_topic_by_id,  get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id, update_translated_handout
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation, generate_topic_imageicon, generate_analogy
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id, update_translated_handout, update_topic_analogy, get_topic_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,13 @@ def convert_objectid_to_str(obj):
     elif isinstance(obj, ObjectId):
         return str(obj)
     return obj
+
+@router.get("/topic/{topic_id}")
+async def get_topic(topic_id: str):
+    topic = await get_topic_by_id(topic_id)
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return topic
 
 @router.post("/list-of-topics/")
 async def generate_list_of_topics(request: TopicRequest):
@@ -486,9 +493,37 @@ async def process_handout_translation(points):
     return results
 
 
+class AnalogyRequest(BaseModel):
+    topic_id: str
+
+@router.post("/generate-analogy")
+async def generate_topic_analogy(request: AnalogyRequest):
+    try:
+        # Get points of discussion for the topic
+        points_discussion = await get_points_discussion_by_topic_id(request.topic_id)
+        
+        if not points_discussion:
+            raise HTTPException(status_code=404, detail="No points of discussion found for this topic")
+        
+        # Extract the points of discussion text
+        points_text = "\n".join([point['point_of_discussion'] for point in points_discussion])
+        
+        # Generate the analogy
+        analogy = generate_analogy(points_text)
+        
+        # Store the analogy in the database
+        updated = await update_topic_analogy(request.topic_id, analogy)
+        
+        if not updated:
+            raise HTTPException(status_code=500, detail="Failed to update topic with new analogy")
+        
+        return {"message": "Analogy generated and stored successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class TopicRequest(BaseModel):
     topic: str
-
 
 class TopicImageRequest(BaseModel):
     topic: str
@@ -501,3 +536,4 @@ async def generate_image_route(request: TopicImageRequest):
         return {"message": "Image generated and uploaded successfully", "image_url": image_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

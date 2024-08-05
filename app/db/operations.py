@@ -65,8 +65,20 @@ async def get_elaborated_points_by_topic_id(topic_name_id):
     cursor = points_discussion_collection.find({"topic_name_id": topic_name_id})
     return await cursor.to_list(length=None)
 
-async def get_topic_by_id(topic_id):
-    return await list_topics_collection.find_one({"_id": ObjectId(topic_id)})
+def convert_object_id(obj):
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {k: convert_object_id(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_object_id(v) for v in obj]
+    return obj
+
+async def get_topic_by_id(topic_id: str):
+    topic = await list_topics_collection.find_one({"_id": ObjectId(topic_id)})
+    if topic:
+        return convert_object_id(topic)
+    return None
 
 async def update_prompting_content(topic_id, prompting_summary):
     result = await points_discussion_collection.update_many(
@@ -217,3 +229,11 @@ async def get_main_topic_by_id(main_topic_id: str):
     except Exception as e:
         logger.error(f"Error getting main topic by ID: {str(e)}")
         return None    
+    
+
+async def update_topic_analogy(topic_id: str, analogy: str):
+    result = await list_topics_collection.update_one(
+        {"_id": ObjectId(topic_id)},
+        {"$set": {"topic_analogy": analogy}}
+    )
+    return result.modified_count > 0
