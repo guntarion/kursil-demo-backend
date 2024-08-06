@@ -19,7 +19,7 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 if ENVIRONMENT == "production":
     origins = ["https://powerspeak.id"]
 else:
-    origins = ["http://localhost:3000"]
+    origins = ["http://localhost:3000", "https://powerspeak.id"]
 
 # Add CORS middleware
 app.add_middleware(
