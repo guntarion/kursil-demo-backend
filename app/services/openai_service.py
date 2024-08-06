@@ -39,7 +39,7 @@ def count_tokens(text):
     tokens = enc.encode(text)
     return len(tokens)
 
-def parse_generated_content(content):
+async def parse_generated_content(content):
     sections = content.split('\n\n')
     topics = []
     topic_pattern = re.compile(r'\d+\.\s+\*\*Topic Title:\*\* (.*?)\n', re.DOTALL)
@@ -86,7 +86,7 @@ def generate_analogy(points_of_discussion):
     analogy = completion.choices[0].message.content.strip()
     return analogy
 
-def generate_summary(parsed_topics):
+async def generate_summary(parsed_topics):
     prompt = "Generate a concise and coherent summary of the learning objectives based on the following information about several learning topics. This summary will be included in a curriculum document to offer a general overview of what participants will achieve through the training program. The summary should integrate the objectives from each topic to highlight the program's overall educational goals, ensuring clarity and alignment with the intended learning outcomes. Provide only the summary and nothing else.\n\n"
 
     for topic in parsed_topics:
@@ -105,7 +105,7 @@ def generate_summary(parsed_topics):
     summary = completion.choices[0].message.content.strip()
     return summary
 
-def create_listof_topic(topic):
+async def create_listof_topic(topic):
     # Read the prompt template
     prompt_template = read_prompt("./app/prompts/prompt_listof_topic.txt")
 
@@ -132,12 +132,10 @@ def create_listof_topic(topic):
         prompt_input_token_count, prompt_output_token_count)
 
     # Parse the generated content
-    parsed_topics = parse_generated_content(list_of_topics)
-
-    parsed_topics = parse_generated_content(list_of_topics)
+    parsed_topics = await parse_generated_content(list_of_topics)
 
     # Generate summary
-    summary = generate_summary(parsed_topics)
+    summary = await generate_summary(parsed_topics)
 
     # Calculate additional cost for summary generation
     summary_prompt_token_count = count_tokens(prompt)
@@ -152,18 +150,18 @@ def create_listof_topic(topic):
         "cost": total_cost_idr,
         "list_of_topics": [t["topic_name"] for t in parsed_topics],
         "main_topic_objective": summary,
-        "latest_kursil_document": str,  # Path to the latest generated Kursil document
-        "latest_handout_document": str,  # Path to the latest generated Handout document
-        "latest_powerpoint_document": str,  # Path to the latest generated Powerpoint document
-        "link_image_icon": str, 
-        "link_audio_pitch": str 
+        "latest_kursil_document": None,  # Changed from str to None
+        "latest_handout_document": None,  # Changed from str to None
+        "latest_powerpoint_document": None,  # Changed from str to None
+        "link_image_icon": None,  # Changed from str to None
+        "link_audio_pitch": None  # Changed from str to None
     }
-    result = main_topic_collection.insert_one(main_topic_data)
+    result = await main_topic_collection.insert_one(main_topic_data)
     main_topic_id = str(result.inserted_id)
 
     for topic in parsed_topics:
         topic["main_topic_id"] = main_topic_id
-        list_topics_collection.insert_one(topic)
+        await list_topics_collection.insert_one(topic)
 
     return {
         "main_topic_id": main_topic_id,
@@ -171,6 +169,22 @@ def create_listof_topic(topic):
         "generated_content": parsed_topics,
         "main_topic_objective": summary
     }
+
+# Translate topic from user
+async def translate_topic(topic: str) -> str:
+    try:
+        translator = GoogleTranslator(source='id', target='en')
+        # Ensure the topic is not more than 400 characters
+        truncated_topic = topic[:400]
+        translated_topic = translator.translate(truncated_topic)
+        
+        logger.debug(f"== Original topic: {truncated_topic}")
+        logger.debug(f"== Translated topic: {translated_topic}")
+        
+        return translated_topic
+    except Exception as e:
+        logger.error(f"Error translating topic: {str(e)}")
+        raise
 
 def translate_points(points: List[str]) -> List[str]:
     prompt = "Translate the following points of discussion to Bahasa Indonesia:\n\n"

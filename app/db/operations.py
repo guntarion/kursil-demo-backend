@@ -23,7 +23,11 @@ logger.addHandler(console_handler)
 
 
 async def get_all_main_topics():
-    cursor = main_topic_collection.find({}, {"main_topic": 1, "cost": 1})
+    cursor = main_topic_collection.find({}, {
+        "main_topic": 1, 
+        "cost": 1, 
+        "link_image_icon": 1  
+    })
     return await cursor.to_list(length=None)
 
 async def get_main_topic_by_id(main_topic_id):

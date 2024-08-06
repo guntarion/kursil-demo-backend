@@ -9,7 +9,7 @@ from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation, generate_topic_imageicon, generate_analogy
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation, generate_topic_imageicon, generate_analogy, translate_topic
 from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id, update_translated_handout, update_topic_analogy, get_topic_by_id
 
 logger = logging.getLogger(__name__)
@@ -38,18 +38,36 @@ async def get_topic(topic_id: str):
 @router.post("/list-of-topics/")
 async def generate_list_of_topics(request: TopicRequest):
     try:
-        result = create_listof_topic(request.topic)
+        # Translate the topic
+        translated_topic = await translate_topic(request.topic)
+        logger.debug(f"Translated topic: {translated_topic}")
+        
+        # Use the translated topic to create the list of topics
+        result = await create_listof_topic(translated_topic)
+        logger.debug(f"Result from create_listof_topic: {result}")
+        
+        # Add the original and translated topics to the result
+        result['original_topic'] = request.topic
+        result['translated_topic'] = translated_topic
+        
+        logger.debug(f"Final result before conversion: {result}")
         return convert_objectid_to_str(result)
     except Exception as e:
-        logging.error(f"Error in generate_list_of_topics: {str(e)}")
+        logging.error(f"Error in generate_list_of_topics: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# router
 @router.get("/main-topics/")
 async def get_main_topics():
     try:
         main_topics = await get_all_main_topics()
-        return convert_objectid_to_str(main_topics)
+        converted_topics = convert_objectid_to_str(main_topics)
+        
+        for topic in converted_topics:
+            logging.info(f"Topic: {topic.get('main_topic')}, Image Link: {topic.get('link_image_icon')}")
+        
+        return converted_topics
     except Exception as e:
         logging.error(f"Error in get_main_topics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
