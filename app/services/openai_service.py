@@ -563,3 +563,59 @@ async def generate_topic_imageicon(topic: str, main_topic_id: str) -> str:
         logger.error(f"Error generating image: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Error generating image: {str(e)}")
+
+async def get_all_cost(main_topic_id: str):
+    # Get the main topic document
+    main_topic = await main_topic_collection.find_one({"_id": ObjectId(main_topic_id)})
+    if not main_topic:
+        logger.warning(f"Main topic not found for ID: {main_topic_id}")
+        return None, [], {}
+
+    all_costs = []
+    debug_info = {
+        "main_topic_id": main_topic_id,
+        "list_topics": [],
+        "cost_entries": []
+    }
+
+    # Convert ObjectId to string for querying list_topics_collection
+    list_topics_query = {"main_topic_id": main_topic_id}
+    logger.info(f"Querying list_topics_collection with: {list_topics_query}")
+
+    list_topics_cursor = list_topics_collection.find(list_topics_query)
+    list_topics_docs = await list_topics_cursor.to_list(length=None)
+
+    logger.info(f"Found {len(list_topics_docs)} list topics for main topic {main_topic_id}")
+
+    for list_topic in list_topics_docs:
+        topic_id_str = str(list_topic["_id"])
+        logger.info(f"Checking costs for topic: {list_topic['topic_name']} (ID: {topic_id_str})")
+
+        # Query cost_ai_collection using string representation of topic_id
+        cost_cursor = cost_ai_collection.find({"topic_id": topic_id_str})
+        cost_docs = await cost_cursor.to_list(length=None)
+
+        logger.info(f"Found {len(cost_docs)} cost entries for topic {list_topic['topic_name']}")
+
+        if len(cost_docs) == 0:
+            logger.warning(f"No cost entries found for topic {list_topic['topic_name']} (ID: {topic_id_str})")
+
+        for cost in cost_docs:
+            cost_entry = {
+                'topic_name': list_topic['topic_name'],
+                'content': cost['content'],
+                'process_name': cost['process_name'],
+                'cost': cost['cost'],
+                'datetime': cost['datetime']
+            }
+            all_costs.append(cost_entry)
+            debug_info["cost_entries"].append({
+                "topic_id": topic_id_str,
+                "cost_id": str(cost['_id']),
+                "process_name": cost['process_name']
+            })
+
+    if not all_costs:
+        logger.warning(f"No cost entries found for main topic {main_topic_id}")
+
+    return main_topic['main_topic'], all_costs, debug_info

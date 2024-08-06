@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+faiss_index_66a9db88d795db944978c5d3/
+/faiss_index_66a9db88d795db944978c5d3
+
 # Distribution / packaging
 .Python
 documents/

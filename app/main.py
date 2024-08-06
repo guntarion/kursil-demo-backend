@@ -34,7 +34,7 @@ app.add_middleware(
 # Include the openai router
 app.include_router(openai_router, prefix="/api", tags=["openai"])
 app.include_router(document_routes, prefix="/api", tags=["documents"])
-app.include_router(rag_routes, prefix="/rag", tags=["RAG"])
+app.include_router(rag_routes, prefix="/api", tags=["RAG"])
 app.include_router(multimedia_routes, prefix="/api", tags=["multimedia"])
 
 @app.get("/")
