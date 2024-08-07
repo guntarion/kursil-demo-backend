@@ -619,3 +619,24 @@ async def get_all_cost(main_topic_id: str):
         logger.warning(f"No cost entries found for main topic {main_topic_id}")
 
     return main_topic['main_topic'], all_costs, debug_info
+
+async def do_analisis_kebutuhan(main_topic: str, points_of_discussion: List[str], nama_jabatan: str, job_description: str) -> str:
+    prompt = f"Lakukan analisis, bagi jabatan {nama_jabatan} yang memiliki deskripsi pekerjaan atau tugas pokok dan fungsi berikut {job_description}, apakah memerlukan pelatihan bertopik {main_topic} yang memiliki detail pembahasan berikut {', '.join(points_of_discussion)}. Jika tidak perlu, sebutkan argumen atau alasannya. Jika perlu, maka berikan juga argumennya, dan sebutkan detail pembahasan mana saja tepatnya yang dibutuhkan. Jika dibutuhkan semua, maka sampaikan saja semua. Jika tidak, sebutkan mana-mana yang tepatnya relavan bagi nama_jabatan bersangkutan."
+
+    messages = [
+        {"role": "system", "content": "Anda adalah seorang pengembang konten edukasi dan merupakan konsultan analisis kurikulum dan pembelajaran untuk Pusdiklat PLN yang mendukung Perusahaan Listrik Negara (PLN) dalam menjalankan bisnis ketenagalistrikan dan bidang-bidang terkait lainnya."},
+        {"role": "user", "content": prompt}
+    ]
+
+    try:
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
+            model="gpt-4o-mini",
+            messages=messages
+        )
+
+        analysis_result = response.choices[0].message.content.strip()
+        return analysis_result
+    except Exception as e:
+        logger.error(f"Error in OpenAI request: {str(e)}")
+        raise

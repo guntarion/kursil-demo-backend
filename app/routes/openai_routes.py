@@ -9,8 +9,8 @@ from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from bson import ObjectId
-from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation, generate_topic_imageicon, generate_analogy, translate_topic, get_all_cost
-from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id, update_translated_handout, update_topic_analogy, get_topic_by_id
+from app.services.openai_service import create_listof_topic, translate_points, elaborate_discussionpoint, elaborate_discussionpoint,  generate_prompting, generate_handout, generate_misc_points, generate_quiz, generate_handout_translation, generate_topic_imageicon, generate_analogy, translate_topic, get_all_cost, do_analisis_kebutuhan
+from app.db.operations import get_all_main_topics, get_main_topic_by_id, get_list_topics_by_main_topic_id, get_point_of_discussion, update_prompting, update_handout, update_misc_points, update_quiz, get_points_discussion_by_topic_id, get_points_discussion_ids_by_topic_id, get_topic_id_by_point_id, update_translated_handout, update_topic_analogy, get_topic_by_id, get_all_elaboration_by_main_topic_id, get_all_points_of_discussion_by_main_topic_id
 
 logger = logging.getLogger(__name__)
 
@@ -581,3 +581,58 @@ async def findout_cost(request: CostRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+class TopicElaborationRequest(BaseModel):
+    main_topic_id: str
+
+@router.post("/get-topic-elaboration")
+async def get_topic_elaboration(request: TopicElaborationRequest):
+    try:
+        main_topic, elaborations, debug_info = await get_all_elaboration_by_main_topic_id(request.main_topic_id)
+        if not main_topic:
+            raise HTTPException(status_code=404, detail="Main topic not found")
+        
+        return {
+            "main_topic": main_topic,
+            "elaborations": elaborations,
+            "debug_info": debug_info
+        }
+    except Exception as e:
+        logger.error(f"Error in get_topic_elaboration: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+class MainTopicRequest(BaseModel):
+    main_topic_id: str
+
+@router.get("/all-points-of-discussion/{main_topic_id}")
+async def get_all_points_of_discussion(main_topic_id: str):
+    try:
+        points = await get_all_points_of_discussion_by_main_topic_id(main_topic_id)
+        return {"points_of_discussion": points}
+    except Exception as e:
+        logger.error(f"Error retrieving points of discussion: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))    
+    
+class AnalisisKebutuhanRequest(BaseModel):
+    main_topic_id: str
+    nama_jabatan: str
+    job_description: str
+    points_of_discussion: List[str]
+
+@router.post("/analisis-kebutuhan")
+async def analisis_kebutuhan(request: AnalisisKebutuhanRequest):
+    try:
+        main_topic = await get_main_topic_by_id(request.main_topic_id)
+        if not main_topic:
+            raise HTTPException(status_code=404, detail="Main topic not found")
+
+        result = await do_analisis_kebutuhan(
+            main_topic['main_topic'],
+            request.points_of_discussion,
+            request.nama_jabatan,
+            request.job_description
+        )
+        return {"result": result}
+    except Exception as e:
+        logger.error(f"Error in analisis kebutuhan: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))    

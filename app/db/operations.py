@@ -241,3 +241,70 @@ async def update_topic_analogy(topic_id: str, analogy: str):
         {"$set": {"topic_analogy": analogy}}
     )
     return result.modified_count > 0
+
+
+async def get_all_elaboration_by_main_topic_id(main_topic_id: str):
+    # Get the main topic document
+    main_topic = await main_topic_collection.find_one({"_id": ObjectId(main_topic_id)})
+    if not main_topic:
+        logger.warning(f"Main topic not found for ID: {main_topic_id}")
+        return None, []
+
+    all_elaborations = []
+    debug_info = {
+        "main_topic_id": main_topic_id,
+        "list_topics": [],
+        "elaboration_entries": []
+    }
+
+    # Query list_topics_collection
+    list_topics_query = {"main_topic_id": main_topic_id}
+    logger.info(f"Querying list_topics_collection with: {list_topics_query}")
+
+    list_topics_cursor = list_topics_collection.find(list_topics_query)
+    list_topics_docs = await list_topics_cursor.to_list(length=None)
+
+    logger.info(f"Found {len(list_topics_docs)} list topics for main topic {main_topic_id}")
+
+    for list_topic in list_topics_docs:
+        topic_id = list_topic["_id"]
+        debug_info["list_topics"].append({
+            "topic_id": str(topic_id),
+            "topic_name": list_topic["topic_name"]
+        })
+
+        # Query points_discussion_collection using ObjectId for topic_name_id
+        points_discussion_cursor = points_discussion_collection.find({"topic_name_id": topic_id})
+        points_discussion_docs = await points_discussion_cursor.to_list(length=None)
+
+        logger.info(f"Found {len(points_discussion_docs)} points of discussion for topic {list_topic['topic_name']}")
+
+        for point in points_discussion_docs:
+            if point.get('elaboration'):
+                elaboration_entry = {
+                    'topic_name': list_topic['topic_name'],
+                    'point_of_discussion': point['point_of_discussion'],
+                    'elaboration': point['elaboration']
+                }
+                all_elaborations.append(elaboration_entry)
+                debug_info["elaboration_entries"].append({
+                    "topic_id": str(topic_id),
+                    "point_id": str(point['_id']),
+                    "point_of_discussion": point['point_of_discussion']
+                })
+
+    if not all_elaborations:
+        logger.warning(f"No elaboration entries found for main topic {main_topic_id}")
+
+    return main_topic['main_topic'], all_elaborations, debug_info
+
+async def get_all_points_of_discussion_by_main_topic_id(main_topic_id: str):
+    cursor = list_topics_collection.find({"main_topic_id": main_topic_id})
+    topics = await cursor.to_list(length=None)
+    
+    all_points = []
+    for topic in topics:
+        if 'point_of_discussion' in topic:
+            all_points.extend(topic['point_of_discussion'])
+    
+    return all_points
